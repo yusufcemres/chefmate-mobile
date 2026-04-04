@@ -10,11 +10,13 @@ import {
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '../../src/api/client';
 import { useShoppingStore } from '../../src/stores/shopping';
 import { useMealPlanStore } from '../../src/stores/meal-plans';
 import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
 import type { Recipe, MealPlan } from '../../src/types';
+import AiRecipeSuggestion from '../../src/components/AiRecipeSuggestion';
 
 interface NutritionInfo {
   recipeId: string;
@@ -81,7 +83,7 @@ export default function RecipeDetailScreen() {
   if (!recipe) {
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 48 }}>🍽️</Text>
+        <MaterialIcons name="restaurant" size={64} color={colors.surfaceContainerHigh} />
         <Text style={styles.errorText}>Tarif bulunamadı</Text>
       </View>
     );
@@ -95,23 +97,30 @@ export default function RecipeDetailScreen() {
       <Text style={styles.title}>{recipe.title}</Text>
       <Text style={styles.desc}>{recipe.description}</Text>
 
-      {/* Meta Row */}
-      <View style={styles.metaRow}>
-        <View style={styles.metaCard}>
+      {/* Floating Meta Card */}
+      <View style={styles.metaCard}>
+        <View style={styles.metaItem}>
+          <MaterialIcons name="schedule" size={20} color={colors.primary} />
           <Text style={styles.metaValue}>{totalTime} dk</Text>
-          <Text style={styles.metaLabel}>Toplam Süre</Text>
+          <Text style={styles.metaLabel}>Toplam</Text>
         </View>
-        <View style={styles.metaCard}>
+        <View style={styles.metaDivider} />
+        <View style={styles.metaItem}>
+          <MaterialIcons name="restaurant" size={20} color={difficultyColor[recipe.difficulty] || colors.primary} />
           <Text style={[styles.metaValue, { color: difficultyColor[recipe.difficulty] }]}>
             {difficultyLabel[recipe.difficulty]}
           </Text>
           <Text style={styles.metaLabel}>Zorluk</Text>
         </View>
-        <View style={styles.metaCard}>
+        <View style={styles.metaDivider} />
+        <View style={styles.metaItem}>
+          <MaterialIcons name="people" size={20} color={colors.primary} />
           <Text style={styles.metaValue}>{recipe.servingSize}</Text>
           <Text style={styles.metaLabel}>Kişilik</Text>
         </View>
-        <View style={styles.metaCard}>
+        <View style={styles.metaDivider} />
+        <View style={styles.metaItem}>
+          <MaterialIcons name="star" size={20} color={colors.tertiary} />
           <Text style={styles.metaValue}>{(recipe.ratingAvg || 0).toFixed(1)}</Text>
           <Text style={styles.metaLabel}>{recipe.ratingCount} oy</Text>
         </View>
@@ -129,13 +138,26 @@ export default function RecipeDetailScreen() {
       )}
 
       {/* Ingredients */}
-      <Text style={styles.sectionTitle}>Malzemeler</Text>
+      <View style={styles.sectionHeader}>
+        <MaterialIcons name="checklist" size={22} color={colors.primary} />
+        <Text style={styles.sectionTitle}>Malzemeler</Text>
+      </View>
       <View style={styles.ingredientList}>
         {recipe.ingredients.map((ing: any) => (
           <View key={ing.id} style={styles.ingredientRow}>
             <View style={styles.ingredientLeft}>
               <Text style={styles.ingredientName}>{ing.ingredientNameSnapshot}</Text>
-              <Text style={styles.ingredientRole}>{roleLabel[ing.role] || ing.role}</Text>
+              <View style={[styles.roleBadge, {
+                backgroundColor: ing.role === 'main' || ing.role === 'MAIN' ? colors.primaryContainer + '60' :
+                  ing.role === 'seasoning' || ing.role === 'SEASONING' ? colors.tertiaryContainer + '60' :
+                  colors.surfaceContainerHigh,
+              }]}>
+                <Text style={[styles.roleText, {
+                  color: ing.role === 'main' || ing.role === 'MAIN' ? colors.primary :
+                    ing.role === 'seasoning' || ing.role === 'SEASONING' ? colors.tertiary :
+                    colors.textMuted,
+                }]}>{roleLabel[ing.role] || ing.role}</Text>
+              </View>
             </View>
             <Text style={styles.ingredientQty}>
               {ing.quantityDisplay ?? ing.requiredQuantity} {ing.displayUnit ?? ing.requiredUnit}
@@ -145,7 +167,10 @@ export default function RecipeDetailScreen() {
       </View>
 
       {/* Steps */}
-      <Text style={styles.sectionTitle}>Yapılışı</Text>
+      <View style={styles.sectionHeader}>
+        <MaterialIcons name="format-list-numbered" size={22} color={colors.primary} />
+        <Text style={styles.sectionTitle}>Yapılışı</Text>
+      </View>
       <View style={styles.stepList}>
         {recipe.steps.map((step: any) => (
           <View key={step.id} style={styles.stepRow}>
@@ -155,15 +180,22 @@ export default function RecipeDetailScreen() {
             <View style={styles.stepContent}>
               <Text style={styles.stepInstruction}>{step.instruction}</Text>
               {(step.stepDurationMinutes || step.durationMinutes) ? (
-                <Text style={styles.stepDuration}>{step.stepDurationMinutes || step.durationMinutes} dakika</Text>
+                <View style={styles.stepDurationBadge}>
+                  <MaterialIcons name="schedule" size={12} color={colors.tertiary} />
+                  <Text style={styles.stepDuration}>{step.stepDurationMinutes || step.durationMinutes} dakika</Text>
+                </View>
               ) : null}
             </View>
           </View>
         ))}
       </View>
 
+      {/* AI Recipe Suggestion */}
+      <AiRecipeSuggestion recipeId={recipe.id} />
+
       {/* Nutrition Toggle */}
       <TouchableOpacity style={styles.nutritionToggle} onPress={loadNutrition}>
+        <MaterialIcons name={showNutrition ? 'expand-less' : 'expand-more'} size={20} color={colors.primary} />
         <Text style={styles.nutritionToggleText}>
           {showNutrition ? 'Besin Değerlerini Gizle' : 'Besin Değerlerini Göster'}
         </Text>
@@ -173,26 +205,19 @@ export default function RecipeDetailScreen() {
         <View style={styles.nutritionCard}>
           <Text style={styles.nutritionTitle}>Porsiyon Başı ({nutrition.servingSize} kişilik)</Text>
           <View style={styles.nutritionGrid}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{nutrition.perServing.calories}</Text>
-              <Text style={styles.nutritionLabel}>kcal</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{nutrition.perServing.protein}g</Text>
-              <Text style={styles.nutritionLabel}>Protein</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{nutrition.perServing.carbs}g</Text>
-              <Text style={styles.nutritionLabel}>Karb</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{nutrition.perServing.fat}g</Text>
-              <Text style={styles.nutritionLabel}>Yağ</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{nutrition.perServing.fiber}g</Text>
-              <Text style={styles.nutritionLabel}>Lif</Text>
-            </View>
+            {[
+              { label: 'kcal', value: nutrition.perServing.calories, icon: 'local-fire-department' as const },
+              { label: 'Protein', value: `${nutrition.perServing.protein}g`, icon: 'fitness-center' as const },
+              { label: 'Karb', value: `${nutrition.perServing.carbs}g`, icon: 'grain' as const },
+              { label: 'Yağ', value: `${nutrition.perServing.fat}g`, icon: 'water-drop' as const },
+              { label: 'Lif', value: `${nutrition.perServing.fiber}g`, icon: 'eco' as const },
+            ].map((n) => (
+              <View key={n.label} style={styles.nutritionItem}>
+                <MaterialIcons name={n.icon} size={16} color={colors.primary} />
+                <Text style={styles.nutritionValue}>{n.value}</Text>
+                <Text style={styles.nutritionLabel}>{n.label}</Text>
+              </View>
+            ))}
           </View>
           {nutrition.ingredientsWithNutrition < nutrition.totalIngredients && (
             <Text style={styles.nutritionNote}>
@@ -204,19 +229,20 @@ export default function RecipeDetailScreen() {
 
       {/* Action Buttons */}
       <TouchableOpacity style={styles.shopBtn} onPress={handleAddToShoppingList}>
+        <MaterialIcons name="shopping-cart" size={20} color={colors.onSecondary} />
         <Text style={styles.shopBtnText}>Eksik Malzemeleri Listeye Ekle</Text>
       </TouchableOpacity>
 
-      {/* Plana Ekle */}
       <TouchableOpacity style={styles.planBtn} onPress={() => setShowPlanPicker(!showPlanPicker)}>
-        <Text style={styles.planBtnText}>📅 Yemek Planına Ekle</Text>
+        <MaterialIcons name="calendar-today" size={20} color={colors.textInverse} />
+        <Text style={styles.planBtnText}>Yemek Planına Ekle</Text>
       </TouchableOpacity>
 
       {showPlanPicker && (
         <View style={styles.planPicker}>
           {plans.length === 0 ? (
             <Text style={styles.planPickerEmpty}>
-              Henüz planın yok. Profil → Yemek Planlarım'dan oluştur.
+              Henüz planın yok. Profil sayfasından oluştur.
             </Text>
           ) : (
             plans.map((plan) => (
@@ -250,6 +276,7 @@ export default function RecipeDetailScreen() {
         style={styles.cookBtn}
         onPress={() => router.push(`/cooking/${recipe.id}`)}
       >
+        <MaterialIcons name="play-arrow" size={24} color={colors.onPrimary} />
         <Text style={styles.cookBtnText}>Pişirme Modunu Başlat</Text>
       </TouchableOpacity>
 
@@ -261,50 +288,151 @@ export default function RecipeDetailScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.md },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   errorText: { marginTop: spacing.md, fontSize: fontSize.lg, color: colors.textSecondary },
-  title: { fontSize: fontSize.xxl, fontWeight: '800', color: colors.text },
-  desc: { fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.md },
-  metaRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  metaCard: { flex: 1, backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.sm, alignItems: 'center' },
-  metaValue: { fontSize: fontSize.lg, fontWeight: '700', color: colors.text },
-  metaLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+
+  // Header
+  title: { fontSize: fontSize.title, fontWeight: '800', color: colors.text, letterSpacing: -0.5 },
+  desc: { fontSize: fontSize.md, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.md, lineHeight: 22 },
+
+  // Meta Card
+  metaCard: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    alignItems: 'center',
+  },
+  metaItem: { flex: 1, alignItems: 'center', gap: 2 },
+  metaDivider: { width: 1, height: 40, backgroundColor: colors.outlineVariant, opacity: 0.4 },
+  metaValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.text },
+  metaLabel: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '600' },
+
+  // Tags
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginBottom: spacing.lg },
-  tag: { backgroundColor: colors.primaryLight + '30', borderRadius: borderRadius.full, paddingHorizontal: 10, paddingVertical: 4 },
-  tagText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '600' },
-  sectionTitle: { fontSize: fontSize.xl, fontWeight: '700', color: colors.text, marginTop: spacing.md, marginBottom: spacing.sm },
-  ingredientList: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, overflow: 'hidden' },
-  ingredientRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  ingredientLeft: {},
-  ingredientName: { fontSize: fontSize.md, color: colors.text, fontWeight: '500' },
-  ingredientRole: { fontSize: fontSize.xs, color: colors.textMuted },
-  ingredientQty: { fontSize: fontSize.md, fontWeight: '600', color: colors.primary },
-  stepList: { gap: spacing.md },
+  tag: { backgroundColor: colors.primaryContainer + '40', borderRadius: borderRadius.full, paddingHorizontal: 12, paddingVertical: 4 },
+  tagText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: '700' },
+
+  // Section
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md, marginBottom: spacing.sm },
+  sectionTitle: { fontSize: fontSize.xl, fontWeight: '800', color: colors.text, letterSpacing: -0.3 },
+
+  // Ingredients
+  ingredientList: { backgroundColor: colors.surfaceContainerLowest, borderRadius: borderRadius.lg, overflow: 'hidden', marginBottom: spacing.sm },
+  ingredientRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh,
+  },
+  ingredientLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
+  ingredientName: { fontSize: fontSize.md, color: colors.text, fontWeight: '600' },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: borderRadius.full },
+  roleText: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  ingredientQty: { fontSize: fontSize.md, fontWeight: '700', color: colors.primary },
+
+  // Steps
+  stepList: { gap: spacing.md, marginBottom: spacing.md },
   stepRow: { flexDirection: 'row', gap: spacing.sm },
-  stepNumber: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  stepNumberText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.sm },
+  stepNumber: {
+    width: 34,
+    height: 34,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  stepNumberText: { color: colors.onPrimary, fontWeight: '800', fontSize: fontSize.sm },
   stepContent: { flex: 1 },
   stepInstruction: { fontSize: fontSize.md, color: colors.text, lineHeight: 22 },
-  stepDuration: { fontSize: fontSize.xs, color: colors.secondary, fontWeight: '600', marginTop: 4 },
-  stepTip: { fontSize: fontSize.xs, color: colors.warning, marginTop: 2, fontStyle: 'italic' },
-  nutritionToggle: { marginTop: spacing.lg, alignItems: 'center', paddingVertical: spacing.sm },
-  nutritionToggleText: { color: colors.primary, fontWeight: '600', fontSize: fontSize.md },
-  nutritionCard: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginTop: spacing.sm },
-  nutritionTitle: { fontSize: fontSize.md, fontWeight: '700', color: colors.text, marginBottom: spacing.sm },
+  stepDurationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+    backgroundColor: colors.tertiaryContainer + '40',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: borderRadius.full,
+  },
+  stepDuration: { fontSize: fontSize.xs, color: colors.tertiary, fontWeight: '700' },
+
+  // Nutrition
+  nutritionToggle: {
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: spacing.sm,
+  },
+  nutritionToggleText: { color: colors.primary, fontWeight: '700', fontSize: fontSize.md },
+  nutritionCard: {
+    backgroundColor: colors.surfaceContainerLow,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  nutritionTitle: { fontSize: fontSize.md, fontWeight: '800', color: colors.text, marginBottom: spacing.sm },
   nutritionGrid: { flexDirection: 'row', justifyContent: 'space-between' },
-  nutritionItem: { alignItems: 'center', flex: 1 },
+  nutritionItem: { alignItems: 'center', flex: 1, gap: 2 },
   nutritionValue: { fontSize: fontSize.lg, fontWeight: '800', color: colors.primary },
-  nutritionLabel: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2 },
+  nutritionLabel: { fontSize: fontSize.xs, color: colors.textMuted },
   nutritionNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.sm },
-  shopBtn: { backgroundColor: colors.warning, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
-  shopBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.md },
-  planBtn: { backgroundColor: colors.info, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+
+  // Action Buttons
+  shopBtn: {
+    backgroundColor: colors.secondary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  shopBtnText: { color: colors.onSecondary, fontWeight: '800', fontSize: fontSize.md },
+
+  planBtn: {
+    backgroundColor: colors.tertiary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
   planBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.md },
-  planPicker: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, marginTop: spacing.xs, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderLight },
+
+  planPicker: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.lg,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
   planPickerEmpty: { padding: spacing.md, color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
-  planPickerItem: { padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  planPickerName: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  planPickerItem: { padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.surfaceContainerHigh },
+  planPickerName: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
   planPickerMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
-  cookBtn: { backgroundColor: colors.secondary, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
-  cookBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.lg },
+
+  cookBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md + 2,
+    alignItems: 'center',
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  cookBtnText: { color: colors.onPrimary, fontWeight: '800', fontSize: fontSize.lg },
 });

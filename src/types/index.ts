@@ -263,6 +263,28 @@ export interface MealPlanItem {
   };
 }
 
+// ========== AI SUGGESTION ==========
+export interface AiSuggestionResult {
+  title: string;
+  description: string;
+  ingredients: AiSuggestedIngredient[];
+  steps: string[];
+  difficulty: string;
+  servingSize: number;
+  changesSummary: string[];
+  nutritionEstimate?: { calories: string; protein: string };
+  processingTimeMs?: number;
+}
+
+export interface AiSuggestedIngredient {
+  name: string;
+  quantity: number;
+  unit: string;
+  role: string;
+  isChanged: boolean;
+  changeNote?: string;
+}
+
 // ========== PAGINATION ==========
 export interface CursorPage<T> {
   data: T[];

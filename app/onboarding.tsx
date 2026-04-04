@@ -5,36 +5,35 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Switch,
-  TextInput,
   Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
 import { colors, spacing, fontSize, borderRadius } from '../src/theme';
 
 const { width } = Dimensions.get('window');
 
-const allergenOptions = [
-  { key: 'Gluten', icon: '🌾' },
-  { key: 'Süt', icon: '🥛' },
-  { key: 'Yumurta', icon: '🥚' },
-  { key: 'Balık', icon: '🐟' },
-  { key: 'Kabuklu Deniz Ürünü', icon: '🦐' },
-  { key: 'Fıstık', icon: '🥜' },
-  { key: 'Soya', icon: '🫘' },
-  { key: 'Kereviz', icon: '🥬' },
-  { key: 'Hardal', icon: '🟡' },
-  { key: 'Susam', icon: '🫓' },
+const allergenOptions: { key: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
+  { key: 'Gluten', icon: 'grass' },
+  { key: 'Süt', icon: 'water-drop' },
+  { key: 'Yumurta', icon: 'egg-alt' },
+  { key: 'Balık', icon: 'set-meal' },
+  { key: 'Kabuklu Deniz Ürünü', icon: 'restaurant' },
+  { key: 'Fıstık', icon: 'spa' },
+  { key: 'Soya', icon: 'eco' },
+  { key: 'Kereviz', icon: 'local-florist' },
+  { key: 'Hardal', icon: 'circle' },
+  { key: 'Susam', icon: 'grain' },
 ];
 
-const dietOptions = [
-  { key: 'vegetarian', label: 'Vejetaryen', icon: '🥗', desc: 'Et ve balık yok' },
-  { key: 'vegan', label: 'Vegan', icon: '🌱', desc: 'Hayvansal ürün yok' },
-  { key: 'gluten_free', label: 'Glutensiz', icon: '🚫', desc: 'Gluten içermeyen' },
-  { key: 'dairy_free', label: 'Süt Ürünsüz', icon: '🥛', desc: 'Laktoz/süt yok' },
-  { key: 'low_carb', label: 'Düşük Karbonhidrat', icon: '🥩', desc: 'Keto / Low-carb' },
+const dietOptions: { key: string; label: string; icon: keyof typeof MaterialIcons.glyphMap; desc: string }[] = [
+  { key: 'vegetarian', label: 'Vejetaryen', icon: 'eco', desc: 'Et ve balık yok' },
+  { key: 'vegan', label: 'Vegan', icon: 'spa', desc: 'Hayvansal ürün yok' },
+  { key: 'gluten_free', label: 'Glutensiz', icon: 'do-not-disturb', desc: 'Gluten içermeyen' },
+  { key: 'dairy_free', label: 'Süt Ürünsüz', icon: 'water-drop', desc: 'Laktoz/süt yok' },
+  { key: 'low_carb', label: 'Düşük Karbonhidrat', icon: 'restaurant', desc: 'Keto / Low-carb' },
 ];
 
 const TOTAL_STEPS = 4;
@@ -97,7 +96,9 @@ export default function OnboardingScreen() {
         {/* STEP 0: Welcome */}
         {step === 0 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.heroIcon}>👨‍🍳</Text>
+            <View style={styles.heroIconCircle}>
+              <MaterialIcons name="restaurant-menu" size={48} color={colors.primary} />
+            </View>
             <Text style={styles.heroTitle}>ChefMate'e{'\n'}Hoş Geldin!</Text>
             <Text style={styles.heroDesc}>
               Mutfağındaki malzemelere göre tarif önerileri al, yemek planları oluştur ve alışveriş listeni yönet.
@@ -111,9 +112,21 @@ export default function OnboardingScreen() {
         {/* STEP 1: Diet Preferences */}
         {step === 1 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepIcon}>🥗</Text>
+            <View style={styles.stepIconCircle}>
+              <MaterialIcons name="eco" size={32} color={colors.primary} />
+            </View>
             <Text style={styles.stepTitle}>Beslenme Tercihlerin</Text>
             <Text style={styles.stepDesc}>Sana uygun olmayan tarifleri filtrelememize yardımcı olur</Text>
+            {/* Tercihim yok butonu */}
+            <TouchableOpacity
+              style={[styles.noPrefBtn, Object.values(selectedDiets).every((v) => !v) && styles.noPrefBtnActive]}
+              onPress={() => setSelectedDiets({})}
+            >
+              <Text style={[styles.noPrefText, Object.values(selectedDiets).every((v) => !v) && styles.noPrefTextActive]}>
+                Her şeyi yerim, tercihim yok
+              </Text>
+            </TouchableOpacity>
+
             <View style={styles.optionsGrid}>
               {dietOptions.map((d) => {
                 const active = !!selectedDiets[d.key];
@@ -123,10 +136,10 @@ export default function OnboardingScreen() {
                     style={[styles.optionCard, active && styles.optionCardActive]}
                     onPress={() => toggleDiet(d.key)}
                   >
-                    <Text style={styles.optionIcon}>{d.icon}</Text>
+                    <MaterialIcons name={d.icon} size={28} color={active ? colors.primary : colors.textMuted} />
                     <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>{d.label}</Text>
                     <Text style={styles.optionDesc}>{d.desc}</Text>
-                    {active && <View style={styles.checkBadge}><Text style={styles.checkText}>✓</Text></View>}
+                    {active && <View style={styles.checkBadge}><MaterialIcons name="check" size={14} color={colors.textInverse} /></View>}
                   </TouchableOpacity>
                 );
               })}
@@ -137,7 +150,9 @@ export default function OnboardingScreen() {
         {/* STEP 2: Allergens */}
         {step === 2 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepIcon}>⚠️</Text>
+            <View style={styles.stepIconCircle}>
+              <MaterialIcons name="warning-amber" size={32} color={colors.warning} />
+            </View>
             <Text style={styles.stepTitle}>Alerjenler</Text>
             <Text style={styles.stepDesc}>Bu malzemeleri içeren tarifleri hariç tutacağız</Text>
             <View style={styles.allergenGrid}>
@@ -149,7 +164,7 @@ export default function OnboardingScreen() {
                     style={[styles.allergenChip, active && styles.allergenChipActive]}
                     onPress={() => toggleAllergen(a.key)}
                   >
-                    <Text style={styles.allergenIcon}>{a.icon}</Text>
+                    <MaterialIcons name={a.icon} size={18} color={active ? colors.error : colors.textMuted} />
                     <Text style={[styles.allergenLabel, active && styles.allergenLabelActive]}>{a.key}</Text>
                   </TouchableOpacity>
                 );
@@ -162,7 +177,9 @@ export default function OnboardingScreen() {
         {/* STEP 3: Serving + Finish */}
         {step === 3 && (
           <View style={styles.stepContainer}>
-            <Text style={styles.stepIcon}>🍽️</Text>
+            <View style={styles.stepIconCircle}>
+              <MaterialIcons name="people" size={32} color={colors.primary} />
+            </View>
             <Text style={styles.stepTitle}>Porsiyon Sayısı</Text>
             <Text style={styles.stepDesc}>Genellikle kaç kişilik yemek yapıyorsun?</Text>
             <View style={styles.servingSelector}>
@@ -185,7 +202,7 @@ export default function OnboardingScreen() {
             </View>
 
             <View style={styles.readyCard}>
-              <Text style={styles.readyIcon}>🎉</Text>
+              <MaterialIcons name="celebration" size={42} color={colors.secondary} />
               <Text style={styles.readyTitle}>Hazırsın!</Text>
               <Text style={styles.readyDesc}>
                 Tercihlerini kaydedip hemen yemek keşfetmeye başlayabilirsin.
@@ -203,33 +220,38 @@ export default function OnboardingScreen() {
               <Text style={styles.skipText}>Atla</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nextBtn} onPress={next}>
-              <Text style={styles.nextBtnText}>Başlayalım →</Text>
+              <Text style={styles.nextBtnText}>Başlayalım</Text>
+              <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         ) : step < TOTAL_STEPS - 1 ? (
           <>
-            <TouchableOpacity onPress={back}>
-              <Text style={styles.backText}>← Geri</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={back}>
+              <MaterialIcons name="arrow-back" size={18} color={colors.primary} />
+              <Text style={styles.backText}>Geri</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSkip}>
               <Text style={styles.skipText}>Atla</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.nextBtn} onPress={next}>
-              <Text style={styles.nextBtnText}>İleri →</Text>
+              <Text style={styles.nextBtnText}>İleri</Text>
+              <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <TouchableOpacity onPress={back}>
-              <Text style={styles.backText}>← Geri</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={back}>
+              <MaterialIcons name="arrow-back" size={18} color={colors.primary} />
+              <Text style={styles.backText}>Geri</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.finishBtn, saving && { opacity: 0.5 }]}
               onPress={handleFinish}
               disabled={saving}
             >
+              <MaterialIcons name="auto-awesome" size={18} color={colors.onPrimary} />
               <Text style={styles.finishBtnText}>
-                {saving ? 'Kaydediliyor...' : 'Keşfetmeye Başla! 🚀'}
+                {saving ? 'Kaydediliyor...' : 'Keşfetmeye Başla!'}
               </Text>
             </TouchableOpacity>
           </>
@@ -263,15 +285,46 @@ const styles = StyleSheet.create({
   stepContainer: { alignItems: 'center', paddingTop: spacing.lg },
 
   // Hero (Welcome)
-  heroIcon: { fontSize: 72, marginBottom: spacing.md },
+  heroIconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
   heroTitle: { fontSize: fontSize.title, fontWeight: '800', color: colors.text, textAlign: 'center', lineHeight: 42 },
   heroDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md, lineHeight: 22, paddingHorizontal: spacing.md },
   heroSub: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md },
 
   // Step headers
-  stepIcon: { fontSize: 48, marginBottom: spacing.sm },
+  stepIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: colors.primaryContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
   stepTitle: { fontSize: fontSize.xxl, fontWeight: '800', color: colors.text, textAlign: 'center' },
   stepDesc: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.lg },
+
+  // No preference
+  noPrefBtn: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.borderLight,
+    marginBottom: spacing.sm,
+  },
+  noPrefBtnActive: { borderColor: colors.success, backgroundColor: colors.success + '15' },
+  noPrefText: { fontSize: fontSize.md, fontWeight: '600', color: colors.textSecondary },
+  noPrefTextActive: { color: colors.success, fontWeight: '700' },
 
   // Diet options grid
   optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, width: '100%' },
@@ -285,7 +338,6 @@ const styles = StyleSheet.create({
     borderColor: colors.borderLight,
   },
   optionCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight + '15' },
-  optionIcon: { fontSize: 32, marginBottom: spacing.xs },
   optionLabel: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
   optionLabelActive: { color: colors.primary },
   optionDesc: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
@@ -306,7 +358,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   allergenChipActive: { borderColor: colors.error, backgroundColor: '#FEE2E2' },
-  allergenIcon: { fontSize: 18 },
   allergenLabel: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: '500' },
   allergenLabelActive: { color: colors.error, fontWeight: '700' },
   allergenNote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' },
@@ -317,13 +368,11 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: colors.surface,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  servingBtnText: { fontSize: 28, color: colors.primary, fontWeight: '700', lineHeight: 32 },
+  servingBtnText: { fontSize: 28, color: colors.onPrimaryContainer, fontWeight: '700', lineHeight: 32 },
   servingDisplay: { alignItems: 'center' },
   servingNumber: { fontSize: 48, fontWeight: '800', color: colors.primary },
   servingUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
@@ -339,7 +388,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
-  readyIcon: { fontSize: 42, marginBottom: spacing.sm },
   readyTitle: { fontSize: fontSize.xl, fontWeight: '800', color: colors.text },
   readyDesc: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs },
 
@@ -360,19 +408,26 @@ const styles = StyleSheet.create({
     borderTopColor: colors.borderLight,
   },
   skipText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: '500' },
+  backBtn: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4 },
   backText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
   nextBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 6,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.full,
   },
-  nextBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
+  nextBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: fontSize.md },
   finishBtn: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 8,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.full,
   },
-  finishBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
+  finishBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: fontSize.md },
 });

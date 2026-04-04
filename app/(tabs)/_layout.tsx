@@ -1,24 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { Platform, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors } from '../../src/theme';
+import { colors, borderRadius } from '../../src/theme';
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
-  const icons: Record<string, string> = {
-    Tarifler: '🍳',
-    Stok: '🧊',
-    Tara: '📷',
-    Liste: '🛒',
-    Profil: '👤',
-  };
-  return (
-    <Text style={{ fontSize: focused ? 26 : 22, opacity: focused ? 1 : 0.5 }}>
-      {icons[label] || '📋'}
-    </Text>
-  );
-}
+const TAB_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
+  index: 'restaurant-menu',
+  inventory: 'kitchen',
+  scan: 'photo-camera',
+  shopping: 'shopping-cart',
+  profile: 'person',
+};
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -40,29 +34,74 @@ export default function TabLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.borderLight,
-          height: 60,
-          paddingBottom: 8,
+          backgroundColor: colors.surfaceContainerLowest,
+          borderTopColor: 'transparent',
+          height: Platform.OS === 'web' ? 64 : 70,
+          paddingBottom: Platform.OS === 'web' ? 8 : 12,
+          paddingTop: 6,
+          borderTopLeftRadius: borderRadius.xxl,
+          borderTopRightRadius: borderRadius.xxl,
+          position: 'absolute',
+          elevation: 8,
+          shadowColor: '#302F2A',
+          shadowOpacity: 0.06,
+          shadowRadius: 24,
+          shadowOffset: { width: 0, height: -12 },
         },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
-        headerStyle: { backgroundColor: colors.surface },
-        headerTitleStyle: { fontWeight: '700', color: colors.text },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '700',
+          letterSpacing: 0.5,
+          textTransform: 'uppercase',
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
+        },
+        headerStyle: {
+          backgroundColor: colors.background,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 0,
+        },
+        headerTitleStyle: {
+          fontWeight: '800',
+          color: colors.primary,
+          fontSize: 20,
+          letterSpacing: -0.5,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Tarifler',
-          tabBarIcon: ({ focused }) => <TabIcon label="Tarifler" focused={focused} />,
-          headerTitle: 'ChefMate',
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              backgroundColor: colors.primaryContainer,
+              borderRadius: borderRadius.full,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            } : undefined}>
+              <MaterialIcons name="restaurant-menu" size={24} color={focused ? colors.primary : color} />
+            </View>
+          ),
+          headerTitle: 'The Culinary Editorial',
         }}
       />
       <Tabs.Screen
         name="inventory"
         options={{
           title: 'Stok',
-          tabBarIcon: ({ focused }) => <TabIcon label="Stok" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              backgroundColor: colors.primaryContainer,
+              borderRadius: borderRadius.full,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            } : undefined}>
+              <MaterialIcons name="kitchen" size={24} color={focused ? colors.primary : color} />
+            </View>
+          ),
           headerTitle: 'Mutfak Stoğum',
         }}
       />
@@ -70,7 +109,16 @@ export default function TabLayout() {
         name="scan"
         options={{
           title: 'Tara',
-          tabBarIcon: ({ focused }) => <TabIcon label="Tara" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              backgroundColor: colors.primaryContainer,
+              borderRadius: borderRadius.full,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            } : undefined}>
+              <MaterialIcons name="photo-camera" size={24} color={focused ? colors.primary : color} />
+            </View>
+          ),
           headerTitle: 'AI Tarama',
         }}
       />
@@ -78,7 +126,16 @@ export default function TabLayout() {
         name="shopping"
         options={{
           title: 'Liste',
-          tabBarIcon: ({ focused }) => <TabIcon label="Liste" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              backgroundColor: colors.primaryContainer,
+              borderRadius: borderRadius.full,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            } : undefined}>
+              <MaterialIcons name="shopping-cart" size={24} color={focused ? colors.primary : color} />
+            </View>
+          ),
           headerTitle: 'Alışveriş Listesi',
         }}
       />
@@ -86,7 +143,16 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profil',
-          tabBarIcon: ({ focused }) => <TabIcon label="Profil" focused={focused} />,
+          tabBarIcon: ({ color, focused }) => (
+            <View style={focused ? {
+              backgroundColor: colors.primaryContainer,
+              borderRadius: borderRadius.full,
+              paddingHorizontal: 16,
+              paddingVertical: 4,
+            } : undefined}>
+              <MaterialIcons name="person" size={24} color={focused ? colors.primary : color} />
+            </View>
+          ),
           headerTitle: 'Profilim',
         }}
       />
