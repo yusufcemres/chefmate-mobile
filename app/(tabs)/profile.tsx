@@ -156,8 +156,13 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       {/* Households */}
-      <TouchableOpacity style={styles.householdsBtn} onPress={() => router.push('/households')}>
-        <Text style={styles.householdsBtnText}>Hanelerim</Text>
+      <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/households')}>
+        <Text style={styles.navBtnText}>🏠  Hanelerim</Text>
+      </TouchableOpacity>
+
+      {/* Meal Plans */}
+      <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/meal-plans')}>
+        <Text style={styles.navBtnText}>📅  Yemek Planlarım</Text>
       </TouchableOpacity>
 
       {/* Logout */}
@@ -194,8 +199,8 @@ const styles = StyleSheet.create({
   chipTextActive: { color: colors.error, fontWeight: '600' },
   saveBtn: { backgroundColor: colors.primary, borderRadius: borderRadius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md },
   saveBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
-  householdsBtn: { backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md, borderWidth: 1, borderColor: colors.border },
-  householdsBtnText: { color: colors.text, fontWeight: '700', fontSize: fontSize.md },
+  navBtn: { backgroundColor: colors.surface, borderRadius: borderRadius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.md, borderWidth: 1, borderColor: colors.border },
+  navBtnText: { color: colors.text, fontWeight: '700', fontSize: fontSize.md },
   logoutBtn: { borderWidth: 1, borderColor: colors.error, borderRadius: borderRadius.md, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
   logoutText: { color: colors.error, fontWeight: '600', fontSize: fontSize.md },
   disabled: { opacity: 0.5 },

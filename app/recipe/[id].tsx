@@ -12,8 +12,9 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { api } from '../../src/api/client';
 import { useShoppingStore } from '../../src/stores/shopping';
+import { useMealPlanStore } from '../../src/stores/meal-plans';
 import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
-import type { Recipe } from '../../src/types';
+import type { Recipe, MealPlan } from '../../src/types';
 
 interface NutritionInfo {
   recipeId: string;
@@ -36,8 +37,11 @@ export default function RecipeDetailScreen() {
   const [nutrition, setNutrition] = useState<NutritionInfo | null>(null);
   const [showNutrition, setShowNutrition] = useState(false);
   const { generateFromRecipe } = useShoppingStore();
+  const { plans, fetchPlans, addItem: addToPlan } = useMealPlanStore();
+  const [showPlanPicker, setShowPlanPicker] = useState(false);
 
   useEffect(() => {
+    fetchPlans();
     api.get<{ data: Recipe }>(`/recipes/${id}`)
       .then((res) => setRecipe(res.data))
       .catch(() => {})
@@ -203,6 +207,45 @@ export default function RecipeDetailScreen() {
         <Text style={styles.shopBtnText}>Eksik Malzemeleri Listeye Ekle</Text>
       </TouchableOpacity>
 
+      {/* Plana Ekle */}
+      <TouchableOpacity style={styles.planBtn} onPress={() => setShowPlanPicker(!showPlanPicker)}>
+        <Text style={styles.planBtnText}>📅 Yemek Planına Ekle</Text>
+      </TouchableOpacity>
+
+      {showPlanPicker && (
+        <View style={styles.planPicker}>
+          {plans.length === 0 ? (
+            <Text style={styles.planPickerEmpty}>
+              Henüz planın yok. Profil → Yemek Planlarım'dan oluştur.
+            </Text>
+          ) : (
+            plans.map((plan) => (
+              <TouchableOpacity
+                key={plan.id}
+                style={styles.planPickerItem}
+                onPress={async () => {
+                  try {
+                    const today = new Date().toISOString().split('T')[0];
+                    await addToPlan(plan.id, { recipeId: recipe.id, date: today, mealType: 'DINNER' });
+                    setShowPlanPicker(false);
+                    const msg = `"${recipe.title}" plana eklendi!`;
+                    Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Eklendi', msg);
+                  } catch (err: any) {
+                    const msg = err.message || 'Hata';
+                    Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
+                  }
+                }}
+              >
+                <Text style={styles.planPickerName}>{plan.name}</Text>
+                <Text style={styles.planPickerMeta}>
+                  {new Date(plan.startDate).toLocaleDateString('tr')} — {new Date(plan.endDate).toLocaleDateString('tr')}
+                </Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+      )}
+
       <TouchableOpacity
         style={styles.cookBtn}
         onPress={() => router.push(`/cooking/${recipe.id}`)}
@@ -255,6 +298,13 @@ const styles = StyleSheet.create({
   nutritionNote: { fontSize: fontSize.xs, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.sm },
   shopBtn: { backgroundColor: colors.warning, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.lg },
   shopBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.md },
+  planBtn: { backgroundColor: colors.info, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
+  planBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.md },
+  planPicker: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, marginTop: spacing.xs, overflow: 'hidden', borderWidth: 1, borderColor: colors.borderLight },
+  planPickerEmpty: { padding: spacing.md, color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center' },
+  planPickerItem: { padding: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  planPickerName: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  planPickerMeta: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
   cookBtn: { backgroundColor: colors.secondary, borderRadius: borderRadius.lg, paddingVertical: spacing.md, alignItems: 'center', marginTop: spacing.sm },
   cookBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.lg },
 });
