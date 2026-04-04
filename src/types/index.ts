@@ -227,6 +227,42 @@ export interface HouseholdMember {
   joinedAt: string;
 }
 
+// ========== MEAL PLANS ==========
+export interface MealPlan {
+  id: string;
+  userId: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+  items: MealPlanItem[];
+  byDate?: Record<string, MealPlanItem[]>;
+  _count?: { items: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MealPlanItem {
+  id: string;
+  mealPlanId: string;
+  recipeId: string;
+  date: string;
+  mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+  servings: number;
+  isCooked: boolean;
+  sortOrder: number;
+  recipe?: {
+    id: string;
+    title: string;
+    slug: string;
+    difficulty: string;
+    totalTimeMinutes: number;
+    servingSize: number;
+    imageUrl: string | null;
+    totalCalories: number | null;
+  };
+}
+
 // ========== PAGINATION ==========
 export interface CursorPage<T> {
   data: T[];
