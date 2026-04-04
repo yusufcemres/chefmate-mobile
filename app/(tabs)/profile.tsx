@@ -165,6 +165,11 @@ export default function ProfileScreen() {
         <Text style={styles.navBtnText}>📅  Yemek Planlarım</Text>
       </TouchableOpacity>
 
+      {/* Notifications */}
+      <TouchableOpacity style={styles.navBtn} onPress={() => router.push('/notifications')}>
+        <Text style={styles.navBtnText}>🔔  Bildirimler</Text>
+      </TouchableOpacity>
+
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
         <Text style={styles.logoutText}>Çıkış Yap</Text>
