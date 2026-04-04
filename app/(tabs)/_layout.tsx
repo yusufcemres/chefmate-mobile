@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/stores/auth';
 import { colors } from '../../src/theme';
 
@@ -20,9 +22,17 @@ function TabIcon({ label, focused }: { label: string; focused: boolean }) {
 
 export default function TabLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
 
-  if (isLoading) return null;
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_done').then((val) => {
+      setOnboardingDone(val === 'true');
+    });
+  }, []);
+
+  if (isLoading || onboardingDone === null) return null;
   if (!isAuthenticated) return <Redirect href="/(auth)/login" />;
+  if (!onboardingDone) return <Redirect href="/onboarding" />;
 
   return (
     <Tabs
