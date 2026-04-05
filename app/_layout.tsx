@@ -1,7 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import {
@@ -19,12 +19,13 @@ import { useAuthStore } from '../src/stores/auth';
 import { colors } from '../src/theme';
 import { ThemeProvider } from '../src/theme/ThemeContext';
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const init = useAuthStore((s) => s.init);
+  const [timedOut, setTimedOut] = useState(false);
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     'Jakarta-Medium': PlusJakartaSans_500Medium,
     'Jakarta-SemiBold': PlusJakartaSans_600SemiBold,
     'Jakarta-Bold': PlusJakartaSans_700Bold,
@@ -36,15 +37,20 @@ export default function RootLayout() {
 
   useEffect(() => {
     init();
+    // Timeout: if fonts don't load within 3s, proceed anyway
+    const timer = setTimeout(() => setTimedOut(true), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
-  const onLayoutReady = useCallback(async () => {
-    if (fontsLoaded) {
-      await SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
+  const ready = fontsLoaded || fontError !== null || timedOut;
 
-  if (!fontsLoaded) {
+  const onLayoutReady = useCallback(async () => {
+    if (ready) {
+      await SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [ready]);
+
+  if (!ready) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -60,7 +66,7 @@ export default function RootLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.surface },
           headerTintColor: colors.text,
-          headerTitleStyle: { fontFamily: 'Jakarta-Bold' },
+          headerTitleStyle: { fontFamily: fontsLoaded ? 'Jakarta-Bold' : undefined },
           contentStyle: { backgroundColor: colors.background },
         }}
       >
