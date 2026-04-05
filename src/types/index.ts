@@ -120,6 +120,12 @@ export interface Tag {
   id: string;
   name: string;
   slug: string;
+  type?: 'CATEGORY' | 'CUISINE' | 'DIETARY' | 'ATTRIBUTE' | 'SEASONAL';
+  emoji?: string;
+}
+
+export interface TagWithCount extends Tag {
+  _count?: { recipes: number };
 }
 
 // ========== RECOMMENDATIONS ==========
@@ -265,6 +271,7 @@ export interface MealPlanItem {
 
 // ========== AI SUGGESTION ==========
 export interface AiSuggestionResult {
+  logId?: string;
   title: string;
   description: string;
   ingredients: AiSuggestedIngredient[];

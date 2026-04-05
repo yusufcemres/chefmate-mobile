@@ -28,7 +28,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: ShoppingList[] }>('/shopping-lists');
-      set({ lists: res.data || res as any, loading: false });
+      set({ lists: res as any, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
@@ -38,7 +38,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: ShoppingList }>(`/shopping-lists/${id}`);
-      set({ currentList: res.data || res as any, loading: false });
+      set({ currentList: res as any, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
@@ -46,7 +46,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
 
   createList: async (name) => {
     const res = await api.post<{ data: ShoppingList }>('/shopping-lists', { name: name || 'Alışveriş Listem' });
-    const list = res.data || res as any;
+    const list = res as any;
     await get().fetchLists();
     return list;
   },
@@ -54,7 +54,7 @@ export const useShoppingStore = create<ShoppingState>((set, get) => ({
   generateFromRecipe: async (recipeId) => {
     const res = await api.post<any>('/shopping-lists/from-recipe', { recipeId });
     await get().fetchLists();
-    return res.data || res;
+    return res;
   },
 
   addItem: async (listId, item) => {

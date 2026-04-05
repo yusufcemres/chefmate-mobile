@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useShoppingStore } from '../../src/stores/shopping';
 import { useAuthStore } from '../../src/stores/auth';
 import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
@@ -98,7 +99,8 @@ export default function ShoppingScreen() {
     return (
       <View style={styles.container}>
         <TouchableOpacity style={styles.createBtn} onPress={handleCreateList}>
-          <Text style={styles.createBtnText}>+ Yeni Liste</Text>
+          <MaterialIcons name="add-circle" size={20} color={colors.textInverse} />
+          <Text style={styles.createBtnText}>Yeni Liste</Text>
         </TouchableOpacity>
 
         {loading && lists.length === 0 && (
@@ -135,7 +137,7 @@ export default function ShoppingScreen() {
                     </View>
                   )}
                   <TouchableOpacity onPress={() => handleDeleteList(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Text style={styles.deleteIcon}>🗑️</Text>
+                    <MaterialIcons name="delete-outline" size={20} color={colors.error} />
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -157,12 +159,13 @@ export default function ShoppingScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.detailHeader}>
-        <TouchableOpacity onPress={() => { setViewMode('lists'); setShowAddItem(false); }}>
-          <Text style={styles.backBtn}>← Listeler</Text>
+        <TouchableOpacity onPress={() => { setViewMode('lists'); setShowAddItem(false); }} style={styles.backBtnWrap}>
+          <MaterialIcons name="arrow-back" size={20} color={colors.primary} />
+          <Text style={styles.backBtn}>Listeler</Text>
         </TouchableOpacity>
         <Text style={styles.detailTitle} numberOfLines={1}>{currentList?.name}</Text>
-        <TouchableOpacity onPress={() => setShowAddItem(!showAddItem)}>
-          <Text style={styles.addBtnIcon}>➕</Text>
+        <TouchableOpacity onPress={() => setShowAddItem(!showAddItem)} style={styles.addIconBtn}>
+          <MaterialIcons name="add" size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -215,7 +218,11 @@ export default function ShoppingScreen() {
         renderItem={({ item }) => (
           <View style={[styles.itemRow, item.isChecked && styles.itemRowChecked]}>
             <TouchableOpacity style={styles.checkbox} onPress={() => handleToggle(item)}>
-              <Text style={{ fontSize: 20 }}>{item.isChecked ? '☑️' : '⬜'}</Text>
+              <MaterialIcons
+                name={item.isChecked ? 'check-circle' : 'radio-button-unchecked'}
+                size={24}
+                color={item.isChecked ? colors.primary : colors.outlineVariant}
+              />
             </TouchableOpacity>
             <View style={styles.itemInfo}>
               <Text style={[styles.itemName, item.isChecked && styles.itemNameChecked]}>
@@ -226,7 +233,7 @@ export default function ShoppingScreen() {
               </Text>
             </View>
             <TouchableOpacity onPress={() => handleRemoveItem(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={{ fontSize: 16, color: colors.error }}>✕</Text>
+              <MaterialIcons name="close" size={18} color={colors.error} />
             </TouchableOpacity>
           </View>
         )}
@@ -236,17 +243,24 @@ export default function ShoppingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    ...(Platform.OS === 'web' ? { maxWidth: 900, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
+  },
 
   // Create button
   createBtn: {
     backgroundColor: colors.primary,
     margin: spacing.md,
     padding: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
-  createBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
+  createBtnText: { color: colors.textInverse, fontWeight: '800', fontSize: fontSize.md },
 
   // Empty state
   emptyState: { alignItems: 'center', marginTop: 60 },
@@ -281,7 +295,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.success,
     borderRadius: 2,
   },
-  deleteIcon: { fontSize: 16 },
+  // (deleteIcon removed — using MaterialIcons now)
 
   // Detail header
   detailHeader: {
@@ -292,9 +306,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
-  backBtn: { color: colors.primary, fontWeight: '600', fontSize: fontSize.md },
-  detailTitle: { flex: 1, textAlign: 'center', fontWeight: '700', fontSize: fontSize.lg, color: colors.text },
-  addBtnIcon: { fontSize: 22 },
+  backBtnWrap: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  backBtn: { color: colors.primary, fontWeight: '700', fontSize: fontSize.md },
+  detailTitle: { flex: 1, textAlign: 'center', fontWeight: '800', fontSize: fontSize.lg, color: colors.text },
+  addIconBtn: { padding: 4 },
 
   // Add form
   addForm: {

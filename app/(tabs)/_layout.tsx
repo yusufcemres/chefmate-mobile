@@ -63,6 +63,7 @@ export default function TabLayout() {
           shadowOpacity: 0,
           borderBottomWidth: 0,
         },
+        headerShown: false,
         headerTitleStyle: {
           fontWeight: '800',
           color: colors.primary,

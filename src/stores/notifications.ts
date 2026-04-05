@@ -35,7 +35,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: ExpiringItem[] }>(`/notifications/expiring-items?days=${days}`);
-      set({ expiringItems: res.data || res as any, loading: false });
+      set({ expiringItems: res as any, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
@@ -53,6 +53,6 @@ export const useNotificationStore = create<NotificationState>((set) => ({
 
   triggerExpiryCheck: async () => {
     const res = await api.post<{ data: { itemsExpiring: number; notificationsSent: number } }>('/notifications/check-expiry');
-    return res.data || res as any;
+    return res as any;
   },
 }));

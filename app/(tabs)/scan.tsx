@@ -120,7 +120,7 @@ export default function ScanScreen() {
       const res = await api.post<{ data: DetectionJob }>('/ai/inventory-detections', {
         imageBase64: base64,
       });
-      const jobId = res.data.id;
+      const jobId = (res as any).id;
 
       // Poll for result
       let attempts = 0;
@@ -129,14 +129,14 @@ export default function ScanScreen() {
         const status = await api.get<{ data: DetectionJob }>(
           `/ai/inventory-detections/${jobId}`,
         );
-        if (status.data.status === 'DETECTED') {
-          setDetection(status.data);
-          setEditedItems(status.data.detectedItems || []);
+        if ((status as any).status === 'DETECTED') {
+          setDetection(status as any);
+          setEditedItems((status as any).detectedItems || []);
           break;
         }
-        if (status.data.status === 'FAILED') {
-          setDetection(status.data);
-          setError(status.data.errorMessage || 'Tespit başarısız oldu.');
+        if ((status as any).status === 'FAILED') {
+          setDetection(status as any);
+          setError((status as any).errorMessage || 'Tespit başarısız oldu.');
           break;
         }
         attempts++;
@@ -182,7 +182,7 @@ export default function ScanScreen() {
       await useInventoryStore.getState().fetchItems(user.id);
       showAlert(
         'Tamamlandı',
-        `${result.data.applied} ürün stoğunuza eklendi!${result.data.skipped > 0 ? `\n${result.data.skipped} ürün eşleştirilemedi.` : ''}`,
+        `${(result as any).applied} ürün stoğunuza eklendi!${(result as any).skipped > 0 ? `\n${(result as any).skipped} ürün eşleştirilemedi.` : ''}`,
       );
       setDetection(null);
       setImageUri(null);

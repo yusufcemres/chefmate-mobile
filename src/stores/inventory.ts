@@ -23,7 +23,7 @@ export const useInventoryStore = create<InventoryState>((set) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: { items: InventoryItem[] } }>(`/users/${userId}/inventory`);
-      set({ items: res.data?.items || [], loading: false });
+      set({ items: (res as any)?.items || [], loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }

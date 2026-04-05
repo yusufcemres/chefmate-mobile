@@ -12,11 +12,29 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
 import { useInventoryStore } from '../../src/stores/inventory';
 import { api } from '../../src/api/client';
 import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
 import type { InventoryItem, Product, Category } from '../../src/types';
+
+// Category emoji mapping for inventory items
+const inventoryCategoryEmoji: Record<string, string> = {
+  'sebze': '\u{1F955}', 'meyve': '\u{1F34E}', 'et': '\u{1F969}', 'tavuk': '\u{1F357}',
+  'balik': '\u{1F41F}', 'balık': '\u{1F41F}', 'sut': '\u{1F95B}', 'süt': '\u{1F95B}',
+  'peynir': '\u{1F9C0}', 'baharat': '\u{1F336}', 'tahil': '\u{1F33E}', 'tahıl': '\u{1F33E}',
+  'baklagil': '\u{1FAD8}', 'yag': '\u{1FAD2}', 'yağ': '\u{1FAD2}', 'icecek': '\u{1F379}',
+  'içecek': '\u{1F379}', 'konserve': '\u{1F96B}', 'dondurulmus': '\u{1F9CA}',
+};
+const getItemEmoji = (item: InventoryItem): string => {
+  const catName = ((item as any).product?.category?.name || '').toLowerCase();
+  const prodName = ((item.product as any)?.productName || item.product?.name || '').toLowerCase();
+  for (const [key, emoji] of Object.entries(inventoryCategoryEmoji)) {
+    if (catName.includes(key) || prodName.includes(key)) return emoji;
+  }
+  return '\u{1F4E6}'; // package emoji default
+};
 
 export default function InventoryScreen() {
   const user = useAuthStore((s) => s.user);
@@ -47,7 +65,7 @@ export default function InventoryScreen() {
     try {
       const res = await api.get<{ data: any[] }>(`/products/search?q=${encodeURIComponent(q)}`);
       // API returns productName, normalize to name
-      const mapped = (res.data || []).map((p: any) => ({ ...p, name: p.productName || p.name }));
+      const mapped = (res as any[] || []).map((p: any) => ({ ...p, name: p.productName || p.name }));
       setSearchResults(mapped);
     } catch {
       setSearchResults([]);
@@ -103,21 +121,37 @@ export default function InventoryScreen() {
 
   const renderItem = ({ item }: { item: InventoryItem }) => {
     const days = daysUntilExpiry(item.expirationDate);
-    const expiryColor = days === null ? undefined : days <= 0 ? colors.error : days <= 3 ? colors.warning : colors.success;
+    const expiryColor = days === null ? colors.textMuted : days <= 0 ? colors.error : days <= 3 ? colors.warning : colors.success;
+    // Expiry progress: 30 days = full green, 0 = red
+    const expiryPercent = days === null ? 100 : Math.max(0, Math.min(100, (days / 30) * 100));
+    const emoji = getItemEmoji(item);
 
     return (
       <TouchableOpacity style={styles.itemCard} onLongPress={() => handleDelete(item)} activeOpacity={0.8}>
+        <Text style={styles.itemEmoji}>{emoji}</Text>
         <View style={styles.itemLeft}>
           <Text style={styles.itemName}>{(item.product as any)?.productName || item.product?.name || 'Ürün'}</Text>
           <Text style={styles.itemDetail}>
             {item.quantityDisplay ?? item.quantity} {item.displayUnit} - {item.storageLocation || 'Mutfak'}
           </Text>
+          {days !== null && (
+            <View style={styles.expiryBarContainer}>
+              <View style={[styles.expiryBarFill, { width: `${expiryPercent}%`, backgroundColor: expiryColor }]} />
+            </View>
+          )}
         </View>
         <View style={styles.itemRight}>
           {days !== null && (
-            <Text style={[styles.expiryText, { color: expiryColor }]}>
-              {days <= 0 ? 'Süresi doldu' : `${days} gün`}
-            </Text>
+            <View style={[styles.expiryBadge, { backgroundColor: expiryColor + '18' }]}>
+              <MaterialIcons
+                name={days <= 0 ? 'error' : days <= 3 ? 'warning' : 'check-circle'}
+                size={14}
+                color={expiryColor}
+              />
+              <Text style={[styles.expiryText, { color: expiryColor }]}>
+                {days <= 0 ? 'Doldu' : `${days}g`}
+              </Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>
@@ -152,7 +186,7 @@ export default function InventoryScreen() {
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setShowAdd(true)}>
-        <Text style={styles.fabText}>+</Text>
+        <MaterialIcons name="add" size={28} color={colors.textInverse} />
       </TouchableOpacity>
 
       {/* Add Modal */}
@@ -222,19 +256,57 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.md, gap: spacing.sm, paddingBottom: 100 },
-  count: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.sm },
-  itemCard: { backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.md, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  list: {
+    padding: spacing.md,
+    gap: spacing.sm,
+    paddingBottom: 100,
+    ...(Platform.OS === 'web' ? { maxWidth: 900, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
+  },
+  count: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.sm, fontWeight: '600' },
+  itemCard: {
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    shadowColor: '#302F2A',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: colors.surfaceContainerHigh + '60',
+  },
+  itemEmoji: { fontSize: 28 },
   itemLeft: { flex: 1 },
-  itemName: { fontSize: fontSize.md, fontWeight: '600', color: colors.text },
+  itemName: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
   itemDetail: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  expiryBarContainer: {
+    height: 4,
+    backgroundColor: colors.surfaceContainerHigh,
+    borderRadius: 2,
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  expiryBarFill: {
+    height: 4,
+    borderRadius: 2,
+  },
   itemRight: { marginLeft: spacing.sm },
-  expiryText: { fontSize: fontSize.xs, fontWeight: '600' },
+  expiryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: borderRadius.full,
+  },
+  expiryText: { fontSize: fontSize.xs, fontWeight: '700' },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: '700', color: colors.text, marginTop: spacing.sm },
   emptyText: { fontSize: fontSize.md, color: colors.textSecondary },
-  fab: { position: 'absolute', bottom: 20, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, elevation: 6 },
-  fabText: { fontSize: 28, color: colors.textInverse, fontWeight: '300', lineHeight: 30 },
+  fab: { position: 'absolute', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg, minHeight: 300 },
   modalTitle: { fontSize: fontSize.xl, fontWeight: '700', marginBottom: spacing.md },

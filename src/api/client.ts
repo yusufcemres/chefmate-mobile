@@ -7,9 +7,9 @@ const DEV_HOST = '192.168.1.20';
 const PROD_API = 'https://chefmate-api-production.up.railway.app/api/v1';
 
 const getBaseUrl = () => {
+  // Web build her zaman production API kullanır
+  if (Platform.OS === 'web') return PROD_API;
   if (!__DEV__) return PROD_API;
-  // Web → localhost, native cihaz → WiFi IP
-  if (Platform.OS === 'web') return 'http://localhost:3000/api/v1';
   return `http://${DEV_HOST}:3000/api/v1`;
 };
 
@@ -76,7 +76,8 @@ class ApiClient {
         if (!retryRes.ok) {
           throw await this.parseError(retryRes);
         }
-        return retryRes.json();
+        const retryJson = await retryRes.json();
+        return retryJson.data !== undefined ? retryJson.data : retryJson;
       }
       throw new Error('Oturum süresi doldu. Lütfen tekrar giriş yapın.');
     }
@@ -88,7 +89,9 @@ class ApiClient {
     // 204 No Content
     if (res.status === 204) return {} as T;
 
-    return res.json();
+    const json = await res.json();
+    // Unwrap API wrapper: {success, data, meta} → data
+    return json.data !== undefined ? json.data : json;
   }
 
   private async parseError(res: Response): Promise<Error> {

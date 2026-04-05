@@ -26,7 +26,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await api.init();
       const res = await api.get<{ data: User }>('/auth/me');
-      set({ user: res.data, isAuthenticated: true, isLoading: false });
+      set({ user: res as any, isAuthenticated: true, isLoading: false });
       get().loadPreferences();
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
@@ -37,7 +37,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const res = await api.post<{
       data: { user: User; accessToken: string; refreshToken: string };
     }>('/auth/login', { email, password });
-    const { user, accessToken, refreshToken } = res.data;
+    const { user, accessToken, refreshToken } = res as any;
     api.setToken(accessToken);
     await api.setRefreshToken(refreshToken);
     set({ user, isAuthenticated: true });
@@ -48,7 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const res = await api.post<{
       data: { user: User; accessToken: string; refreshToken: string };
     }>('/auth/register', { email, password, displayName });
-    const { user, accessToken, refreshToken } = res.data;
+    const { user, accessToken, refreshToken } = res as any;
     api.setToken(accessToken);
     await api.setRefreshToken(refreshToken);
     set({ user, isAuthenticated: true });
@@ -70,7 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
     try {
       const res = await api.get<{ data: UserPreference }>(`/users/${user.id}/preferences`);
-      set({ preferences: res.data });
+      set({ preferences: res as any });
     } catch {
       // preferences not set yet
     }
@@ -80,6 +80,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { user } = get();
     if (!user) return;
     const res = await api.put<{ data: UserPreference }>(`/users/${user.id}/preferences`, prefs);
-    set({ preferences: res.data });
+    set({ preferences: res as any });
   },
 }));

@@ -28,7 +28,7 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: MealPlan[] }>('/meal-plans');
-      set({ plans: res.data || res as any, loading: false });
+      set({ plans: res as any, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
@@ -38,7 +38,7 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const res = await api.get<{ data: MealPlan }>(`/meal-plans/${id}`);
-      set({ currentPlan: res.data || res as any, loading: false });
+      set({ currentPlan: res as any, loading: false });
     } catch (err: any) {
       set({ error: err.message, loading: false });
     }
@@ -46,7 +46,7 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
 
   createPlan: async (name, startDate, endDate) => {
     const res = await api.post<{ data: MealPlan }>('/meal-plans', { name, startDate, endDate });
-    const plan = res.data || res as any;
+    const plan = res as any;
     await get().fetchPlans();
     return plan;
   },
@@ -107,6 +107,6 @@ export const useMealPlanStore = create<MealPlanState>((set, get) => ({
 
   generateShoppingList: async (planId) => {
     const res = await api.post<any>(`/meal-plans/${planId}/shopping-list`);
-    return res.data || res;
+    return res;
   },
 }));

@@ -40,10 +40,15 @@ export default function AiRecipeSuggestion({ recipeId }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AiSuggestionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState<'LIKE' | 'DISLIKE' | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const handleSelect = (key: string) => {
     setResult(null);
     setError(null);
+    setFeedbackGiven(null);
+    setSaved(false);
 
     if (key === selectedType) {
       setSelectedType(null);
@@ -77,8 +82,7 @@ export default function AiRecipeSuggestion({ recipeId }: Props) {
         `/recipes/${recipeId}/ai-suggest`,
         body,
       );
-      // API might return { data: result } or result directly
-      setResult((res as any).data || res);
+      setResult(res as any);
     } catch (err: any) {
       const msg = err.message || 'AI öneri oluşturulamadı';
       setError(msg);
@@ -90,6 +94,32 @@ export default function AiRecipeSuggestion({ recipeId }: Props) {
   const handleCuisineSelect = (cuisine: string) => {
     setShowCuisines(false);
     generate('cuisine', `${cuisine} mutfağı`);
+  };
+
+  const handleFeedback = async (type: 'LIKE' | 'DISLIKE') => {
+    if (!result?.logId || feedbackGiven) return;
+    try {
+      await api.post(`/recipes/${recipeId}/ai-suggest/${result.logId}/feedback`, {
+        feedback: type,
+      });
+      setFeedbackGiven(type);
+    } catch {}
+  };
+
+  const handleSave = async () => {
+    if (!result?.logId || saving || saved) return;
+    setSaving(true);
+    try {
+      await api.post(`/recipes/${recipeId}/ai-suggest/${result.logId}/save`, {});
+      setSaved(true);
+      const msg = 'Tarif taslak olarak kaydedildi!';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Başarılı', msg);
+    } catch {
+      const msg = 'Tarif kaydedilemedi';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCustomSubmit = () => {
@@ -275,6 +305,61 @@ export default function AiRecipeSuggestion({ recipeId }: Props) {
               </View>
             </View>
           )}
+
+          {/* Feedback + Save Row */}
+          <View style={styles.feedbackRow}>
+            <TouchableOpacity
+              style={[
+                styles.feedbackBtn,
+                feedbackGiven === 'LIKE' && styles.feedbackBtnActive,
+              ]}
+              onPress={() => handleFeedback('LIKE')}
+              disabled={!!feedbackGiven}
+            >
+              <MaterialIcons
+                name="thumb-up"
+                size={18}
+                color={feedbackGiven === 'LIKE' ? colors.primary : colors.textSecondary}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.feedbackBtn,
+                feedbackGiven === 'DISLIKE' && styles.feedbackBtnDislike,
+              ]}
+              onPress={() => handleFeedback('DISLIKE')}
+              disabled={!!feedbackGiven}
+            >
+              <MaterialIcons
+                name="thumb-down"
+                size={18}
+                color={feedbackGiven === 'DISLIKE' ? colors.error : colors.textSecondary}
+              />
+            </TouchableOpacity>
+
+            <View style={{ flex: 1 }} />
+
+            <TouchableOpacity
+              style={[styles.saveBtn, saved && styles.saveBtnDone]}
+              onPress={handleSave}
+              disabled={saving || saved}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color={colors.onPrimary} />
+              ) : (
+                <>
+                  <MaterialIcons
+                    name={saved ? 'check' : 'bookmark-add'}
+                    size={16}
+                    color={colors.onPrimary}
+                  />
+                  <Text style={styles.saveBtnText}>
+                    {saved ? 'Kaydedildi' : 'Tarif Olarak Kaydet'}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
 
           {/* Processing time */}
           {result.processingTimeMs != null && (
@@ -570,6 +655,48 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontWeight: '700',
     color: colors.tertiary,
+  },
+
+  // Feedback + Save
+  feedbackRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.outlineVariant + '40',
+  },
+  feedbackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  feedbackBtnActive: {
+    backgroundColor: colors.primaryContainer,
+  },
+  feedbackBtnDislike: {
+    backgroundColor: colors.error + '15',
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  saveBtnDone: {
+    backgroundColor: colors.primary + '80',
+  },
+  saveBtnText: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.onPrimary,
   },
 
   // Processing Time

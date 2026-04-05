@@ -30,7 +30,7 @@ export default function HouseholdsScreen() {
     setLoading(true);
     try {
       const res = await api.get<any>('/households');
-      setHouseholds(res.data || res || []);
+      setHouseholds(res as any || []);
     } catch { }
     setLoading(false);
   };
@@ -53,7 +53,7 @@ export default function HouseholdsScreen() {
   const handleOpenHousehold = async (h: Household) => {
     try {
       const res = await api.get<any>(`/households/${h.id}`);
-      setSelectedHousehold(res.data || res);
+      setSelectedHousehold(res as any);
       setViewMode('detail');
     } catch { }
   };
@@ -62,7 +62,7 @@ export default function HouseholdsScreen() {
     if (!selectedHousehold) return;
     try {
       const res = await api.get<any>(`/households/${selectedHousehold.id}/inventory`);
-      setSharedInventory(res.data || res || []);
+      setSharedInventory(res as any || []);
       setViewMode('inventory');
     } catch { }
   };

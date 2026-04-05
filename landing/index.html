@@ -383,6 +383,8 @@
     }
 
     .feature-card:hover::before { transform: scaleX(1); }
+    .feature-card:hover .feature-icon { transform: scale(1.1) rotate(-3deg); }
+    .feature-card:hover .feature-tag { color: var(--on-primary-container); background: var(--primary-container); padding: 4px 12px; border-radius: var(--radius-full); }
 
     .feature-icon {
       width: 60px;
@@ -392,6 +394,7 @@
       align-items: center;
       justify-content: center;
       margin-bottom: 24px;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     .feature-icon.orange { background: var(--primary-container); color: var(--on-primary-container); }
@@ -420,6 +423,7 @@
       color: var(--primary);
       text-transform: uppercase;
       letter-spacing: 1px;
+      transition: all 0.3s ease;
     }
 
     /* ═══════════════════════════════════════════
@@ -599,6 +603,14 @@
         0 8px 24px rgba(212,84,28,0.1),
         inset 0 0 0 2px rgba(255,255,255,0.08);
       position: relative;
+      transition: transform 0.4s ease;
+    }
+
+    .phone-wrapper {
+      perspective: 1200px;
+    }
+    .phone-wrapper:hover .phone-frame {
+      transform: rotateY(-5deg) rotateX(3deg) scale(1.02);
     }
 
     .phone-notch {
@@ -1200,6 +1212,8 @@
     @media (max-width: 768px) {
       section { padding: 64px 0; }
       .nav-links { display: none; }
+      .nav-cta { display: none; }
+      .nav-hamburger { display: flex; }
       .hero { padding-top: 120px; padding-bottom: 60px; }
       .hero-stats { flex-direction: column; gap: 24px; }
       .features-grid, .steps-grid, .testimonials-grid { grid-template-columns: 1fr; }
@@ -1208,6 +1222,134 @@
       .bento-card.span-6, .bento-card.span-5,
       .bento-card.span-7 { grid-column: span 1; }
       .footer-inner { flex-direction: column; }
+    }
+
+    /* ═══════════════════════════════════════════
+       HAMBURGER + MOBILE MENU
+    ═══════════════════════════════════════════ */
+    .nav-hamburger {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: transparent;
+      color: var(--on-surface);
+      cursor: pointer;
+      border-radius: var(--radius-md);
+      transition: background 0.2s;
+    }
+    .nav-hamburger:hover { background: var(--surface-container-low); }
+
+    .mobile-menu {
+      display: none;
+      position: fixed;
+      inset: 0;
+      top: 68px;
+      z-index: 99;
+      background: rgba(255, 251, 247, 0.97);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      padding: 32px 24px;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .mobile-menu.open { display: flex; }
+
+    .mobile-menu a {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--on-surface-variant);
+      transition: all 0.3s;
+    }
+    .mobile-menu a:hover {
+      background: var(--surface-container-low);
+      color: var(--primary);
+    }
+
+    .mobile-menu .mobile-cta {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: var(--primary);
+      color: var(--on-primary);
+      padding: 16px;
+      border-radius: var(--radius-full);
+      font-weight: 700;
+      font-size: 15px;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+
+    /* ═══════════════════════════════════════════
+       FAQ SECTION
+    ═══════════════════════════════════════════ */
+    .faq-section { background: var(--surface-warm); }
+
+    .faq-list {
+      max-width: 720px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .faq-item {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: box-shadow 0.3s;
+    }
+    .faq-item:hover { box-shadow: var(--shadow-sm); }
+
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: 20px 24px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--on-surface);
+      text-align: left;
+    }
+    .faq-question .material-symbols-outlined {
+      color: var(--primary);
+      transition: transform 0.3s;
+      flex-shrink: 0;
+    }
+    .faq-item.open .faq-question .material-symbols-outlined {
+      transform: rotate(180deg);
+    }
+
+    .faq-answer {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.4s ease, padding 0.3s;
+    }
+    .faq-item.open .faq-answer {
+      max-height: 300px;
+    }
+
+    .faq-answer-inner {
+      padding: 0 24px 20px;
+      font-size: 15px;
+      color: var(--on-surface-variant);
+      line-height: 1.7;
     }
 
     /* ═══════════════════════════════════════════
@@ -1246,8 +1388,24 @@
         <span class="material-symbols-outlined" style="font-size:18px">download</span>
         İndir
       </a>
+      <button class="nav-hamburger" id="hamburgerBtn" aria-label="Menüyü aç">
+        <span class="material-symbols-outlined" style="font-size:28px" id="hamburgerIcon">menu</span>
+      </button>
     </div>
   </header>
+
+  <!-- Mobile Menu -->
+  <div class="mobile-menu" id="mobileMenu">
+    <a href="#ozellikler" onclick="closeMobile()">&#214;zellikler</a>
+    <a href="#ai" onclick="closeMobile()">AI Asistan</a>
+    <a href="#nasil" onclick="closeMobile()">Nasıl &#199;alışır</a>
+    <a href="#kesfet" onclick="closeMobile()">Keşfet</a>
+    <a href="#sss" onclick="closeMobile()">SSS</a>
+    <a href="#indir" class="mobile-cta" onclick="closeMobile()">
+      <span class="material-symbols-outlined" style="font-size:18px">download</span>
+      Hemen İndir
+    </a>
+  </div>
 
   <!-- ═══════════════ HERO ═══════════════ -->
   <section class="hero">
@@ -1279,7 +1437,7 @@
 
       <div class="hero-stats fade-up d4">
         <div class="hero-stat">
-          <div class="hero-stat-value">500+</div>
+          <div class="hero-stat-value">1000+</div>
           <div class="hero-stat-label">Tarif</div>
         </div>
         <div class="hero-stat">
@@ -1478,6 +1636,7 @@
 
         <!-- Phone Mockup -->
         <div class="phone-mockup">
+          <div class="phone-wrapper">
           <div class="phone-frame">
             <div class="phone-notch"></div>
             <div class="phone-screen">
@@ -1599,6 +1758,7 @@
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -1729,7 +1889,7 @@
           </div>
           <p class="testimonial-text">Buzdolabımı fotoğladım, 3 saniyede tüm malzemelerimi tanıdı. Artık alışverişte 'ne alırsam' diye düşünmüyorum.</p>
           <div class="testimonial-author">
-            <div class="testimonial-avatar">AY</div>
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#D4541C,#B0430F)">AY</div>
             <div>
               <div class="testimonial-name">Ayşe Y.</div>
               <div class="testimonial-role">Ev hanımı, 4 kişilik aile</div>
@@ -1747,7 +1907,7 @@
           </div>
           <p class="testimonial-text">AI ile tarifi vegan yaptım, çok başarılı sonuç verdi. Değişiklikleri tek tek açıklaması çok güven verici.</p>
           <div class="testimonial-author">
-            <div class="testimonial-avatar">MK</div>
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#4C6300,#3A4D00)">MK</div>
             <div>
               <div class="testimonial-name">Mehmet K.</div>
               <div class="testimonial-role">Yazılımcı, vegan beslenme</div>
@@ -1765,11 +1925,86 @@
           </div>
           <p class="testimonial-text">Haftalık yemek planlamasıyla hem zamandan hem paradan tasarruf ettim. Alışveriş listesi otomatik oluşunca ayrı güzel.</p>
           <div class="testimonial-author">
-            <div class="testimonial-avatar">ZD</div>
+            <div class="testimonial-avatar" style="background:linear-gradient(135deg,#695B00,#534800)">ZD</div>
             <div>
               <div class="testimonial-name">Zeynep D.</div>
               <div class="testimonial-role">&#214;ğretmen, 2 çocuk annesi</div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FAQ ═══════════════ -->
+  <section class="faq-section" id="sss">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <span class="material-symbols-outlined" style="font-size:16px">help</span>
+          Sıkça Sorulan Sorular
+        </div>
+        <h2 class="section-title">Merak Edilenler</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            ChefMate ücretsiz mi?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Evet! ChefMate tamamen ücretsiz olarak kullanılabilir. Stok yönetimi, tarif eşleştirme, yemek planlama ve AI özellikleri dahil tüm özellikler ücretsizdir.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Hangi yapay zeka modeli kullanılıyor?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Stok tarama için Gemini 2.0 Flash ve GPT-4o kullanıyoruz. Tarif kişiselleştirme de aynı modelleri kullanan akıllı bir fallback sistemiyle çalışır. Her zaman en güncel AI teknolojisi.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Alerjenlerimi nasıl tanımlarım?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">İlk giriş sırasında onboarding ekranında veya daha sonra Profil sayfasından alerjenlerinizi seçebilirsiniz. AI tarif önerileri otomatik olarak alerjenlerinizi dikkate alır.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Stoğumu nasıl tarayabilirim?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Stok ekranındaki kamera ikonuna tıklayıp buzdolabınızı veya malzemelerinizi fotoğlayın. AI saniyeler içinde malzemeleri tanır, siz düzenlemeleri yapıp onaylayın — stoğunuza otomatik eklenir.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Yemek planı nasıl oluşturulur?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Yemek Planları sekmesinden yeni bir haftalık plan oluşturun, günlere tarif ekleyin. Pişirdiğiniz tarifleri işaretleyin, eksik malzemeleri tek tuşla alışveriş listesine gönderin.</div>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFaq(this)">
+            Verilerim güvende mi?
+            <span class="material-symbols-outlined">expand_more</span>
+          </button>
+          <div class="faq-answer">
+            <div class="faq-answer-inner">Tüm verileriniz şifreli bağlantılar (HTTPS) üzerinden iletilir ve güvenli sunucularda saklanır. Kişisel bilgileriniz üçüncü taraflarla paylaşılmaz. JWT tabanlı kimlik doğrulama kullanıyoruz.</div>
           </div>
         </div>
       </div>
@@ -1799,7 +2034,7 @@
           </div>
         </a>
 
-        <a href="https://chefmate-mobile.vercel.app" class="store-btn highlight">
+        <a href="https://chefmate-sand.vercel.app" class="store-btn highlight">
           <span class="material-symbols-outlined" style="font-size:28px">language</span>
           <div>
             <span class="label-sm">Web Uygulaması</span>
@@ -1877,7 +2112,7 @@
       });
     }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
 
-    document.querySelectorAll('.feature-card, .step-card, .bento-card, .testimonial-card').forEach((el, i) => {
+    document.querySelectorAll('.feature-card, .step-card, .bento-card, .testimonial-card, .faq-item').forEach((el, i) => {
       el.style.opacity = '0';
       el.style.transform = 'translateY(30px)';
       el.style.transition = `opacity 0.6s ease ${(i % 3) * 0.1}s, transform 0.6s ease ${(i % 3) * 0.1}s`;
@@ -1889,6 +2124,94 @@
       document.querySelector('header').style.boxShadow =
         window.scrollY > 20 ? '0 4px 24px rgba(212,84,28,0.06)' : 'none';
     });
+
+    // ─── Hamburger Menu ───
+    const hamburgerBtn = document.getElementById('hamburgerBtn');
+    const hamburgerIcon = document.getElementById('hamburgerIcon');
+    const mobileMenu = document.getElementById('mobileMenu');
+
+    hamburgerBtn.addEventListener('click', () => {
+      const isOpen = mobileMenu.classList.toggle('open');
+      hamburgerIcon.textContent = isOpen ? 'close' : 'menu';
+    });
+
+    function closeMobile() {
+      mobileMenu.classList.remove('open');
+      hamburgerIcon.textContent = 'menu';
+    }
+
+    // ─── FAQ Accordion ───
+    function toggleFaq(btn) {
+      const item = btn.parentElement;
+      const wasOpen = item.classList.contains('open');
+      // Close all
+      document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+      // Toggle current
+      if (!wasOpen) item.classList.add('open');
+    }
+
+    // ─── Counter Animation ───
+    function animateCounter(el, target, suffix) {
+      const duration = 1500;
+      const start = performance.now();
+      const isPercent = suffix === '%';
+
+      function update(now) {
+        const progress = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+        const current = Math.round(eased * target);
+        el.textContent = isPercent ? ('%' + current) : (current + (suffix || ''));
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
+
+    const counterObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const text = el.textContent.trim();
+          let target, suffix;
+
+          if (text.includes('+')) {
+            target = parseInt(text);
+            suffix = '+';
+          } else if (text.startsWith('%')) {
+            target = parseInt(text.replace('%', ''));
+            suffix = '%';
+          } else if (text.includes('₺')) {
+            el.textContent = '0 ₺';
+            counterObserver.unobserve(el);
+            return;
+          } else {
+            target = parseInt(text);
+            suffix = '';
+          }
+
+          if (!isNaN(target)) {
+            el.textContent = suffix === '%' ? '%0' : '0';
+            animateCounter(el, target, suffix);
+          }
+          counterObserver.unobserve(el);
+        }
+      });
+    }, { threshold: 0.5 });
+
+    document.querySelectorAll('.hero-stat-value').forEach(el => {
+      counterObserver.observe(el);
+    });
+
+    // ─── Parallax on scroll ───
+    const phoneFrame = document.querySelector('.phone-frame');
+    if (phoneFrame) {
+      window.addEventListener('scroll', () => {
+        const rect = phoneFrame.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const viewCenter = window.innerHeight / 2;
+        const offset = (center - viewCenter) * 0.03;
+        phoneFrame.style.transform = `translateY(${offset}px)`;
+      }, { passive: true });
+    }
   </script>
 
 </body>

@@ -2,22 +2,22 @@
 // Based on "The Culinary Editorial" mockups
 
 export const colors = {
-  // M3 Primary (Koyu Yeşil)
-  primary: '#4C6300',
-  primaryContainer: '#D7F881',
-  onPrimary: '#E0FF8D',
-  onPrimaryContainer: '#485E00',
-  primaryLight: '#D7F881',
-  primaryDark: '#394B00',
-  primaryDim: '#425700',
+  // M3 Primary (Turuncu — marka rengi)
+  primary: '#E66B3D',
+  primaryContainer: '#FFE0D4',
+  onPrimary: '#FFFFFF',
+  onPrimaryContainer: '#812B00',
+  primaryLight: '#FFE0D4',
+  primaryDark: '#C45A2F',
+  primaryDim: '#D4603A',
 
-  // M3 Secondary (Turuncu)
-  secondary: '#A23800',
-  secondaryContainer: '#FFC4AF',
-  onSecondary: '#FFEFEB',
-  onSecondaryContainer: '#812B00',
-  secondaryLight: '#FFC4AF',
-  secondaryDim: '#8E3000',
+  // M3 Secondary (Yeşil — taze/doğal)
+  secondary: '#8DAA3E',
+  secondaryContainer: '#E8F5CC',
+  onSecondary: '#FFFFFF',
+  onSecondaryContainer: '#3E5000',
+  secondaryLight: '#E8F5CC',
+  secondaryDim: '#7A9635',
 
   // M3 Tertiary (Altın/Sarı)
   tertiary: '#695B00',
@@ -47,14 +47,14 @@ export const colors = {
   outlineVariant: '#B0ADA6',
 
   // Semantic
-  success: '#4C6300',
+  success: '#8DAA3E',
   warning: '#695B00',
   error: '#B02500',
   errorContainer: '#F95630',
-  info: '#4C6300',
+  info: '#E66B3D',
 
   // Difficulty
-  easy: '#4C6300',
+  easy: '#8DAA3E',
   medium: '#695B00',
   hard: '#B02500',
 
@@ -90,4 +90,71 @@ export const borderRadius = {
   xl: 32,
   xxl: 48,
   full: 9999,
+};
+
+// Typography — Plus Jakarta Sans (headings) + Manrope (body)
+export const fonts = {
+  // Headings
+  headingMedium: 'Jakarta-Medium',
+  headingSemiBold: 'Jakarta-SemiBold',
+  headingBold: 'Jakarta-Bold',
+  headingExtraBold: 'Jakarta-ExtraBold',
+  // Body
+  bodyRegular: 'Manrope-Regular',
+  bodyMedium: 'Manrope-Medium',
+  bodySemiBold: 'Manrope-SemiBold',
+};
+
+// Dark mode colors
+export const darkColors = {
+  primary: '#FFB59B',
+  primaryContainer: '#812B00',
+  onPrimary: '#4E1600',
+  onPrimaryContainer: '#FFE0D4',
+  primaryLight: '#812B00',
+  primaryDark: '#FFB59B',
+  primaryDim: '#FF8B65',
+
+  secondary: '#D7F881',
+  secondaryContainer: '#394B00',
+  onSecondary: '#1D2600',
+  onSecondaryContainer: '#E8F5CC',
+  secondaryLight: '#394B00',
+  secondaryDim: '#C4E46E',
+
+  tertiary: '#E0C535',
+  tertiaryContainer: '#4E4300',
+
+  background: '#1A1C18',
+  surface: '#1A1C18',
+  surfaceContainerLowest: '#111210',
+  surfaceContainerLow: '#222420',
+  surfaceContainer: '#2A2C28',
+  surfaceContainerHigh: '#343632',
+  surfaceContainerHighest: '#3F413C',
+  surfaceDim: '#1A1C18',
+  card: '#2A2C28',
+
+  text: '#E1DCD4',
+  textSecondary: '#A09C96',
+  textMuted: '#797671',
+  textInverse: '#302F2A',
+
+  border: '#5E5B56',
+  borderLight: '#3F413C',
+  outline: '#A09C96',
+  outlineVariant: '#5E5B56',
+
+  success: '#D7F881',
+  warning: '#E0C535',
+  error: '#FF5449',
+  errorContainer: '#930006',
+  info: '#FFB59B',
+
+  easy: '#D7F881',
+  medium: '#E0C535',
+  hard: '#FF5449',
+
+  inverseSurface: '#E1DCD4',
+  inversePrimary: '#C45A2F',
 };

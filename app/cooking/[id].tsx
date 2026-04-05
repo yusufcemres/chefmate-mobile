@@ -41,7 +41,7 @@ export default function CookingModeScreen() {
 
   useEffect(() => {
     api.get<{ data: CookingData }>(`/recipes/${id}/cooking-mode`)
-      .then((res) => setData(res.data))
+      .then((res) => setData(res as any))
       .catch(() => {});
   }, [id]);
 
