@@ -21,6 +21,11 @@ import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import { useFavoritesStore } from '../../src/stores/favorites';
 import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { HomePageSkeleton } from '../../src/components/Skeleton';
+import { PressableScale } from '../../src/components/PressableScale';
+import { EmptyState } from '../../src/components/EmptyState';
+import { WebFooter } from '../../src/components/WebFooter';
+import { hapticSelection } from '../../src/utils/haptics';
 import type { Recommendation, TagWithCount } from '../../src/types';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -64,10 +69,9 @@ function RecipeCard({ item, onFavToggle, isFav, size = 'normal' }: {
   const isNew = item.createdAt && (Date.now() - new Date(item.createdAt).getTime()) < 7 * 24 * 3600 * 1000;
 
   return (
-    <TouchableOpacity
+    <PressableScale
       style={[styles.recipeCard, isLarge && styles.recipeCardLarge]}
       onPress={() => router.push(`/recipe/${item.id}`)}
-      activeOpacity={0.85}
     >
       {/* Image area */}
       <View style={[styles.cardImageWrap, { height: imageH }]}>
@@ -148,7 +152,7 @@ function RecipeCard({ item, onFavToggle, isFav, size = 'normal' }: {
           )}
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
   );
 }
 
@@ -162,6 +166,7 @@ export default function HomeScreen() {
   const [cuisines, setCuisines] = useState<TagWithCount[]>([]);
   const [trending, setTrending] = useState<any[]>([]);
   const [seasonal, setSeasonal] = useState<any[]>([]);
+  const [collections, setCollections] = useState<any[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [allRecipes, setAllRecipes] = useState<any[]>([]);
 
@@ -204,6 +209,13 @@ export default function HomeScreen() {
     try {
       const res = await api.get<any>('/recipes/seasonal?limit=10');
       setSeasonal(Array.isArray(res) ? res : []);
+    } catch {}
+  };
+
+  const fetchCollections = async () => {
+    try {
+      const res = await api.get<any>('/collections?curated=true');
+      setCollections(Array.isArray(res) ? res : []);
     } catch {}
   };
 
@@ -253,7 +265,7 @@ export default function HomeScreen() {
 
   const initData = async () => {
     setLoading(true);
-    await Promise.all([fetchTags(), fetchTrending(), fetchSeasonal(), fetchRecommendations(), fetchAllRecipes()]);
+    await Promise.all([fetchTags(), fetchTrending(), fetchSeasonal(), fetchCollections(), fetchRecommendations(), fetchAllRecipes()]);
     setLoading(false);
   };
 
@@ -264,7 +276,7 @@ export default function HomeScreen() {
 
   const onRefresh = () => {
     setRefreshing(true);
-    Promise.all([fetchTags(), fetchTrending(), fetchSeasonal(), fetchRecommendations(), fetchAllRecipes()])
+    Promise.all([fetchTags(), fetchTrending(), fetchSeasonal(), fetchCollections(), fetchRecommendations(), fetchAllRecipes()])
       .finally(() => setRefreshing(false));
   };
 
@@ -286,12 +298,14 @@ export default function HomeScreen() {
 
   // ===== FILTER HANDLERS =====
   const onCategoryPress = (slug: string) => {
+    hapticSelection();
     const next = activeCategory === slug ? null : slug;
     setActiveCategory(next);
     fetchAllRecipes(true, next, activeCuisine);
   };
 
   const onCuisinePress = (slug: string) => {
+    hapticSelection();
     const next = activeCuisine === slug ? null : slug;
     setActiveCuisine(next);
     fetchAllRecipes(true, activeCategory, next);
@@ -299,12 +313,7 @@ export default function HomeScreen() {
 
   // ===== LOADING STATE =====
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Tarifler yükleniyor...</Text>
-      </View>
-    );
+    return <HomePageSkeleton />;
   }
 
   // ===== SEARCH RESULTS VIEW =====
@@ -325,11 +334,13 @@ export default function HomeScreen() {
           contentContainerStyle={styles.gridContainer}
           ListEmptyComponent={
             searching ? null : (
-              <View style={styles.empty}>
-                <MaterialIcons name="search-off" size={48} color={colors.outlineVariant} />
-                <Text style={styles.emptyTitle}>Sonuç bulunamadı</Text>
-                <Text style={styles.emptyText}>"{searchQuery}" için tarif bulunamadı</Text>
-              </View>
+              <EmptyState
+                icon="search-off"
+                title="Sonuç bulunamadı"
+                message={`"${searchQuery}" için tarif bulunamadı. Farklı kelimeler deneyin.`}
+                ctaLabel="Aramayı Temizle"
+                onCta={() => handleSearch('')}
+              />
             )
           }
         />
@@ -448,117 +459,175 @@ export default function HomeScreen() {
         </ScrollView>
       )}
 
-      {/* ===== Picks for You / Recommendations (Talabat "Picks for you 🔥") ===== */}
-      {recommendations.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🔥 Sana Özel Tarifler</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-            {recommendations.map((rec) => {
-              const r = rec.recipe;
-              const scorePercent = rec.finalScore > 1 ? Math.round(rec.finalScore) : Math.round(rec.finalScore * 100);
-              const catTag = getCategoryTag(r);
-              return (
-                <TouchableOpacity
-                  key={r.id}
-                  style={styles.pickCard}
-                  onPress={() => router.push(`/recipe/${r.id}`)}
-                  activeOpacity={0.85}
-                >
-                  <View style={styles.pickImageWrap}>
-                    {r.imageUrl ? (
-                      <Image source={{ uri: r.imageUrl }} style={styles.pickImage} resizeMode="cover" />
-                    ) : (
-                      <View style={styles.pickImageFallback}>
-                        <Text style={{ fontSize: 32 }}>{catTag?.emoji || '🍽️'}</Text>
+      {/* When a filter is active, skip discovery sections and show filtered results directly */}
+      {!(activeCategory || activeCuisine) && (
+        <>
+          {/* ===== Picks for You / Recommendations (Talabat "Picks for you 🔥") ===== */}
+          {recommendations.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🔥 Sana Özel Tarifler</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                {recommendations.map((rec) => {
+                  const r = rec.recipe;
+                  const scorePercent = rec.finalScore > 1 ? Math.round(rec.finalScore) : Math.round(rec.finalScore * 100);
+                  const catTag = getCategoryTag(r);
+                  return (
+                    <TouchableOpacity
+                      key={r.id}
+                      style={styles.pickCard}
+                      onPress={() => router.push(`/recipe/${r.id}`)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.pickImageWrap}>
+                        {r.imageUrl ? (
+                          <Image source={{ uri: r.imageUrl }} style={styles.pickImage} resizeMode="cover" />
+                        ) : (
+                          <View style={styles.pickImageFallback}>
+                            <Text style={{ fontSize: 32 }}>{catTag?.emoji || '🍽️'}</Text>
+                          </View>
+                        )}
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.pickGradient} />
+                        <View style={styles.matchBadge}>
+                          <Text style={styles.matchBadgeText}>%{scorePercent}</Text>
+                        </View>
                       </View>
-                    )}
-                    <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.pickGradient} />
-                    <View style={styles.matchBadge}>
-                      <Text style={styles.matchBadgeText}>%{scorePercent}</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.pickTitle} numberOfLines={2}>{r.title}</Text>
-                  <Text style={styles.pickMeta}>
-                    {r.totalTimeMinutes || 0}dk · {difficultyLabel[r.difficulty] || r.difficulty}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </View>
-      )}
+                      <Text style={styles.pickTitle} numberOfLines={2}>{r.title}</Text>
+                      <Text style={styles.pickMeta}>
+                        {r.totalTimeMinutes || 0}dk · {difficultyLabel[r.difficulty] || r.difficulty}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
-      {/* ===== Trending Bento Grid (Talabat "Top rated" + editorial) ===== */}
-      {trending.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 En Beğenilen Tarifler</Text>
-          <View style={styles.bentoGrid}>
-            {/* Large card */}
-            {trending[0] && (
-              <View style={styles.bentoLarge}>
-                <RecipeCard item={trending[0]} onFavToggle={toggleFav} isFav={isFavorite(trending[0].id)} size="large" />
+          {/* ===== Trending Bento Grid (Talabat "Top rated" + editorial) ===== */}
+          {trending.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏆 En Beğenilen Tarifler</Text>
+              <View style={styles.bentoGrid}>
+                {/* Large card */}
+                {trending[0] && (
+                  <View style={styles.bentoLarge}>
+                    <RecipeCard item={trending[0]} onFavToggle={toggleFav} isFav={isFavorite(trending[0].id)} size="large" />
+                  </View>
+                )}
+                {/* Two small cards */}
+                <View style={styles.bentoSmallCol}>
+                  {trending[1] && (
+                    <RecipeCard item={trending[1]} onFavToggle={toggleFav} isFav={isFavorite(trending[1].id)} size="small" />
+                  )}
+                  {trending[2] && (
+                    <RecipeCard item={trending[2]} onFavToggle={toggleFav} isFav={isFavorite(trending[2].id)} size="small" />
+                  )}
+                </View>
               </View>
-            )}
-            {/* Two small cards */}
-            <View style={styles.bentoSmallCol}>
-              {trending[1] && (
-                <RecipeCard item={trending[1]} onFavToggle={toggleFav} isFav={isFavorite(trending[1].id)} size="small" />
-              )}
-              {trending[2] && (
-                <RecipeCard item={trending[2]} onFavToggle={toggleFav} isFav={isFavorite(trending[2].id)} size="small" />
+              {/* Remaining trending as horizontal scroll */}
+              {trending.length > 3 && (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                  {trending.slice(3).map((r) => (
+                    <View key={r.id} style={styles.horizontalCard}>
+                      <RecipeCard item={r} onFavToggle={toggleFav} isFav={isFavorite(r.id)} />
+                    </View>
+                  ))}
+                </ScrollView>
               )}
             </View>
-          </View>
-          {/* Remaining trending as horizontal scroll */}
-          {trending.length > 3 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-              {trending.slice(3).map((r) => (
-                <View key={r.id} style={styles.horizontalCard}>
-                  <RecipeCard item={r} onFavToggle={toggleFav} isFav={isFavorite(r.id)} />
-                </View>
-              ))}
-            </ScrollView>
+          )}
+
+          {/* ===== Seasonal Section ===== */}
+          {seasonal.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{season.emoji} {season.name} Tarifleri</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                {seasonal.map((r) => (
+                  <TouchableOpacity
+                    key={r.id}
+                    style={styles.seasonalCard}
+                    onPress={() => router.push(`/recipe/${r.id}`)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.seasonalImageWrap}>
+                      {r.imageUrl ? (
+                        <Image source={{ uri: r.imageUrl }} style={styles.seasonalImage} resizeMode="cover" />
+                      ) : (
+                        <View style={styles.seasonalImageFallback}>
+                          <Text style={{ fontSize: 36 }}>{getCategoryTag(r)?.emoji || season.emoji}</Text>
+                        </View>
+                      )}
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.seasonalGradient} />
+                      <View style={styles.seasonalBadge}>
+                        <Text style={styles.seasonalBadgeText}>{season.emoji} {season.name}</Text>
+                      </View>
+                      <Text style={styles.seasonalTitle} numberOfLines={2}>{r.title}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* ===== Collections Section ===== */}
+          {collections.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📚 Koleksiyonlar</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                {collections.map((col) => (
+                  <TouchableOpacity
+                    key={col.id}
+                    style={styles.collectionCard}
+                    onPress={() => router.push(`/collection/${col.slug}`)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.collectionImageWrap}>
+                      {col.imageUrl ? (
+                        <Image source={{ uri: col.imageUrl }} style={styles.collectionImage} resizeMode="cover" />
+                      ) : (
+                        <View style={styles.collectionImageFallback}>
+                          <MaterialIcons name="collections-bookmark" size={28} color={colors.textMuted} />
+                        </View>
+                      )}
+                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={styles.collectionGradient} />
+                      <View style={styles.collectionInfo}>
+                        <Text style={styles.collectionName} numberOfLines={1}>{col.name}</Text>
+                        <Text style={styles.collectionCount}>{col._count?.recipes || 0} tarif</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </>
+      )}
+
+      {/* ===== All Recipes / Filtered Results Header ===== */}
+      <View style={styles.allRecipesHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+          <Text style={styles.sectionTitle}>
+            {(activeCategory || activeCuisine)
+              ? `🔍 ${
+                  activeCategory
+                    ? categories.find(c => c.slug === activeCategory)?.name || activeCategory
+                    : ''
+                }${activeCategory && activeCuisine ? ' · ' : ''}${
+                  activeCuisine
+                    ? cuisines.find(c => c.slug === activeCuisine)?.name || activeCuisine
+                    : ''
+                } (${allRecipes.length}${hasMore ? '+' : ''})`
+              : `📖 Tüm Tarifler ${allRecipes.length > 0 ? `(${allRecipes.length}${hasMore ? '+' : ''})` : ''}`
+            }
+          </Text>
+          {(activeCategory || activeCuisine) && (
+            <TouchableOpacity
+              onPress={() => { setActiveCategory(null); setActiveCuisine(null); fetchAllRecipes(true, null, null); }}
+              style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: colors.primary + '15', borderRadius: 16 }}
+            >
+              <Text style={{ color: colors.primary, fontFamily: 'Jakarta-SemiBold', fontSize: fontSize.xs }}>Temizle</Text>
+            </TouchableOpacity>
           )}
         </View>
-      )}
-
-      {/* ===== Seasonal Section ===== */}
-      {seasonal.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{season.emoji} {season.name} Tarifleri</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-            {seasonal.map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                style={styles.seasonalCard}
-                onPress={() => router.push(`/recipe/${r.id}`)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.seasonalImageWrap}>
-                  {r.imageUrl ? (
-                    <Image source={{ uri: r.imageUrl }} style={styles.seasonalImage} resizeMode="cover" />
-                  ) : (
-                    <View style={styles.seasonalImageFallback}>
-                      <Text style={{ fontSize: 36 }}>{getCategoryTag(r)?.emoji || season.emoji}</Text>
-                    </View>
-                  )}
-                  <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.seasonalGradient} />
-                  <View style={styles.seasonalBadge}>
-                    <Text style={styles.seasonalBadgeText}>{season.emoji} {season.name}</Text>
-                  </View>
-                  <Text style={styles.seasonalTitle} numberOfLines={2}>{r.title}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* ===== All Recipes Header ===== */}
-      <View style={styles.allRecipesHeader}>
-        <Text style={styles.sectionTitle}>
-          📖 Tüm Tarifler {allRecipes.length > 0 ? `(${allRecipes.length}${hasMore ? '+' : ''})` : ''}
-        </Text>
       </View>
     </View>
   );
@@ -590,16 +659,21 @@ export default function HomeScreen() {
       onEndReached={loadMoreRecipes}
       onEndReachedThreshold={0.4}
       ListFooterComponent={
-        loadingMore ? (
-          <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.lg }} />
-        ) : null
+        <>
+          {loadingMore && (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: spacing.lg }} />
+          )}
+          {!hasMore && allRecipes.length > 0 && <WebFooter />}
+        </>
       }
       ListEmptyComponent={
-        <View style={styles.empty}>
-          <MaterialIcons name="restaurant-menu" size={48} color={colors.outlineVariant} />
-          <Text style={styles.emptyTitle}>Tarif bulunamadı</Text>
-          <Text style={styles.emptyText}>Filtreleri değiştirmeyi deneyin</Text>
-        </View>
+        <EmptyState
+          icon="restaurant-menu"
+          title="Tarif bulunamadı"
+          message="Bu filtre kombinasyonunda tarif yok. Filtreleri değiştirmeyi deneyin."
+          ctaLabel="Filtreleri Temizle"
+          onCta={() => { setActiveCategory(null); setActiveCuisine(null); fetchAllRecipes(true, null, null); }}
+        />
       }
     />
     </>
@@ -919,6 +993,64 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontFamily: 'Jakarta-Bold',
     color: '#fff',
+  },
+
+  // Collection cards
+  collectionCard: {
+    width: 200,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  collectionImageWrap: {
+    width: '100%' as any,
+    height: 130,
+    position: 'relative',
+    backgroundColor: colors.surfaceContainerHigh,
+  },
+  collectionImage: {
+    width: '100%' as any,
+    height: '100%' as any,
+    borderRadius: borderRadius.lg,
+  },
+  collectionImageFallback: {
+    width: '100%' as any,
+    height: '100%' as any,
+    backgroundColor: colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: borderRadius.lg,
+  },
+  collectionGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    borderBottomLeftRadius: borderRadius.lg,
+    borderBottomRightRadius: borderRadius.lg,
+  },
+  collectionInfo: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+  },
+  collectionName: {
+    fontSize: fontSize.md,
+    fontFamily: 'Jakarta-Bold',
+    color: '#fff',
+    letterSpacing: -0.2,
+  },
+  collectionCount: {
+    fontSize: fontSize.xs,
+    fontFamily: 'Manrope-SemiBold',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 1,
   },
 
   // All Recipes Header
