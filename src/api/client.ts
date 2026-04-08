@@ -1,16 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Development: bilgisayarın local IP adresi (aynı WiFi ağında fiziksel cihaz için)
-const DEV_HOST = '192.168.1.20';
+import Constants from 'expo-constants';
 
 const PROD_API = 'https://chefmate-api-production.up.railway.app/api/v1';
 
 const getBaseUrl = () => {
-  // Web build her zaman production API kullanır
   if (Platform.OS === 'web') return PROD_API;
   if (!__DEV__) return PROD_API;
-  return `http://${DEV_HOST}:3000/api/v1`;
+  // Expo dev: use debuggerHost (auto-detected from Metro)
+  const debuggerHost = Constants.expoConfig?.hostUri?.split(':')[0];
+  const devHost = debuggerHost || 'localhost';
+  return `http://${devHost}:3000/api/v1`;
 };
 
 const API_BASE = getBaseUrl();
@@ -23,6 +24,7 @@ interface RequestOptions {
 
 class ApiClient {
   private accessToken: string | null = null;
+  private isRefreshing = false;
 
   async init() {
     this.accessToken = await AsyncStorage.getItem('access_token');
@@ -104,22 +106,33 @@ class ApiClient {
   }
 
   private async tryRefresh(): Promise<boolean> {
-    const refreshToken = await this.getRefreshToken();
-    if (!refreshToken) return false;
+    // Prevent concurrent refresh attempts
+    if (this.isRefreshing) return false;
+    this.isRefreshing = true;
 
     try {
+      const refreshToken = await this.getRefreshToken();
+      if (!refreshToken) return false;
+
       const res = await fetch(`${API_BASE}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!res.ok) return false;
+      if (!res.ok) {
+        // Clear tokens on refresh failure
+        this.setToken(null);
+        await this.setRefreshToken(null);
+        return false;
+      }
       const data = await res.json();
       this.setToken(data.data?.accessToken || data.accessToken);
       await this.setRefreshToken(data.data?.refreshToken || data.refreshToken);
       return true;
     } catch {
       return false;
+    } finally {
+      this.isRefreshing = false;
     }
   }
 

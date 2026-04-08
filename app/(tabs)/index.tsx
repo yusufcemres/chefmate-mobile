@@ -310,6 +310,13 @@ export default function HomeScreen() {
     if (!favsLoaded) fetchFavs();
   }, [user]);
 
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
     Promise.all([fetchTags(), fetchTrending(), fetchSeasonal(), fetchCollections(), fetchRecommendations(), fetchAllRecipes()])
