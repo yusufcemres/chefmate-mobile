@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,50 +6,72 @@ import {
   StyleSheet,
   ScrollView,
   Dimensions,
+  Animated,
+  Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { colors, spacing, fontSize, borderRadius, fonts } from '../src/theme';
 
 const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
-const allergenOptions: { key: string; icon: keyof typeof MaterialIcons.glyphMap }[] = [
-  { key: 'Gluten', icon: 'grass' },
-  { key: 'Süt', icon: 'water-drop' },
-  { key: 'Yumurta', icon: 'egg-alt' },
-  { key: 'Balık', icon: 'set-meal' },
-  { key: 'Kabuklu Deniz Ürünü', icon: 'restaurant' },
-  { key: 'Fıstık', icon: 'spa' },
-  { key: 'Soya', icon: 'eco' },
-  { key: 'Kereviz', icon: 'local-florist' },
-  { key: 'Hardal', icon: 'circle' },
-  { key: 'Susam', icon: 'grain' },
+const cuisineOptions = [
+  { slug: 'turk-mutfagi', name: 'Türk', emoji: '🇹🇷' },
+  { slug: 'italyan-mutfagi', name: 'İtalyan', emoji: '🇮🇹' },
+  { slug: 'japon-mutfagi', name: 'Japon', emoji: '🇯🇵' },
+  { slug: 'kore-mutfagi', name: 'Kore', emoji: '🇰🇷' },
+  { slug: 'meksika-mutfagi', name: 'Meksika', emoji: '🇲🇽' },
+  { slug: 'hint-mutfagi', name: 'Hint', emoji: '🇮🇳' },
+  { slug: 'fransiz-mutfagi', name: 'Fransız', emoji: '🇫🇷' },
+  { slug: 'cin-mutfagi', name: 'Çin', emoji: '🇨🇳' },
+  { slug: 'akdeniz-mutfagi', name: 'Akdeniz', emoji: '🫒' },
+  { slug: 'osmanli-mutfagi', name: 'Osmanlı', emoji: '👑' },
 ];
 
-const dietOptions: { key: string; label: string; icon: keyof typeof MaterialIcons.glyphMap; desc: string }[] = [
-  { key: 'vegetarian', label: 'Vejetaryen', icon: 'eco', desc: 'Et ve balık yok' },
-  { key: 'vegan', label: 'Vegan', icon: 'spa', desc: 'Hayvansal ürün yok' },
-  { key: 'gluten_free', label: 'Glutensiz', icon: 'do-not-disturb', desc: 'Gluten içermeyen' },
-  { key: 'dairy_free', label: 'Süt Ürünsüz', icon: 'water-drop', desc: 'Laktoz/süt yok' },
-  { key: 'low_carb', label: 'Düşük Karbonhidrat', icon: 'restaurant', desc: 'Keto / Low-carb' },
+const dietOptions = [
+  { key: 'vegetarian', label: 'Vejetaryen', emoji: '🥦', desc: 'Et ve balık yok' },
+  { key: 'vegan', label: 'Vegan', emoji: '🌱', desc: 'Hayvansal ürün yok' },
+  { key: 'gluten_free', label: 'Glutensiz', emoji: '🌾', desc: 'Gluten içermeyen' },
+  { key: 'dairy_free', label: 'Süt Ürünsüz', emoji: '🥛', desc: 'Laktoz/süt yok' },
+  { key: 'low_carb', label: 'Düşük Karb', emoji: '🥩', desc: 'Keto / Low-carb' },
 ];
 
-const TOTAL_STEPS = 4;
+const allergenOptions = [
+  'Gluten', 'Süt', 'Yumurta', 'Balık', 'Kabuklu Deniz Ürünü',
+  'Fıstık', 'Soya', 'Kereviz', 'Hardal', 'Susam',
+];
+
+const TOTAL_STEPS = 2;
 
 export default function OnboardingScreen() {
   const { updatePreferences } = useAuthStore();
   const [step, setStep] = useState(0);
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
   const [selectedDiets, setSelectedDiets] = useState<Record<string, boolean>>({});
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>([]);
   const [servingSize, setServingSize] = useState(2);
   const [saving, setSaving] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
-  const toggleDiet = (key: string) => {
-    setSelectedDiets((prev) => ({ ...prev, [key]: !prev[key] }));
+  const animateTransition = (nextStep: number) => {
+    Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }).start(() => {
+      setStep(nextStep);
+      Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    });
   };
 
+  const next = () => animateTransition(Math.min(step + 1, TOTAL_STEPS - 1));
+  const back = () => animateTransition(Math.max(step - 1, 0));
+
+  const toggleCuisine = (slug: string) => {
+    setSelectedCuisines((prev) =>
+      prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
+    );
+  };
+  const toggleDiet = (key: string) => setSelectedDiets((prev) => ({ ...prev, [key]: !prev[key] }));
   const toggleAllergen = (key: string) => {
     setSelectedAllergens((prev) =>
       prev.includes(key) ? prev.filter((a) => a !== key) : [...prev, key],
@@ -64,9 +86,7 @@ export default function OnboardingScreen() {
         allergens: selectedAllergens,
         servingSize,
       });
-    } catch {
-      // preferences may fail if endpoint not ready — continue anyway
-    }
+    } catch {}
     await AsyncStorage.setItem('onboarding_done', 'true');
     setSaving(false);
     router.replace('/(tabs)');
@@ -77,180 +97,177 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
-  const back = () => setStep((s) => Math.max(s - 1, 0));
-
   return (
-    <View style={styles.container}>
-      {/* Progress bar */}
-      <View style={styles.progressContainer}>
+    <View style={s.container}>
+      {/* Progress */}
+      <View style={s.progressRow}>
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <View
-            key={i}
-            style={[styles.progressDot, i <= step && styles.progressDotActive]}
-          />
+          <View key={i} style={[s.progressBar, i <= step && s.progressBarActive]} />
         ))}
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* STEP 0: Welcome */}
-        {step === 0 && (
-          <View style={styles.stepContainer}>
-            <View style={styles.heroIconCircle}>
-              <MaterialIcons name="restaurant-menu" size={48} color={colors.primary} />
-            </View>
-            <Text style={styles.heroTitle}>ChefMate'e{'\n'}Hoş Geldin!</Text>
-            <Text style={styles.heroDesc}>
-              Mutfağındaki malzemelere göre tarif önerileri al, yemek planları oluştur ve alışveriş listeni yönet.
-            </Text>
-            <Text style={styles.heroSub}>
-              Sana en iyi önerileri sunabilmemiz için birkaç tercihini öğrenmek istiyoruz.
-            </Text>
-          </View>
-        )}
-
-        {/* STEP 1: Diet Preferences */}
-        {step === 1 && (
-          <View style={styles.stepContainer}>
-            <View style={styles.stepIconCircle}>
-              <MaterialIcons name="eco" size={32} color={colors.primary} />
-            </View>
-            <Text style={styles.stepTitle}>Beslenme Tercihlerin</Text>
-            <Text style={styles.stepDesc}>Sana uygun olmayan tarifleri filtrelememize yardımcı olur</Text>
-            {/* Tercihim yok butonu */}
-            <TouchableOpacity
-              style={[styles.noPrefBtn, Object.values(selectedDiets).every((v) => !v) && styles.noPrefBtnActive]}
-              onPress={() => setSelectedDiets({})}
-            >
-              <Text style={[styles.noPrefText, Object.values(selectedDiets).every((v) => !v) && styles.noPrefTextActive]}>
-                Her şeyi yerim, tercihim yok
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.optionsGrid}>
-              {dietOptions.map((d) => {
-                const active = !!selectedDiets[d.key];
-                return (
-                  <TouchableOpacity
-                    key={d.key}
-                    style={[styles.optionCard, active && styles.optionCardActive]}
-                    onPress={() => toggleDiet(d.key)}
-                  >
-                    <MaterialIcons name={d.icon} size={28} color={active ? colors.primary : colors.textMuted} />
-                    <Text style={[styles.optionLabel, active && styles.optionLabelActive]}>{d.label}</Text>
-                    <Text style={styles.optionDesc}>{d.desc}</Text>
-                    {active && <View style={styles.checkBadge}><MaterialIcons name="check" size={14} color={colors.textInverse} /></View>}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* STEP 2: Allergens */}
-        {step === 2 && (
-          <View style={styles.stepContainer}>
-            <View style={styles.stepIconCircle}>
-              <MaterialIcons name="warning-amber" size={32} color={colors.warning} />
-            </View>
-            <Text style={styles.stepTitle}>Alerjenler</Text>
-            <Text style={styles.stepDesc}>Bu malzemeleri içeren tarifleri hariç tutacağız</Text>
-            <View style={styles.allergenGrid}>
-              {allergenOptions.map((a) => {
-                const active = selectedAllergens.includes(a.key);
-                return (
-                  <TouchableOpacity
-                    key={a.key}
-                    style={[styles.allergenChip, active && styles.allergenChipActive]}
-                    onPress={() => toggleAllergen(a.key)}
-                  >
-                    <MaterialIcons name={a.icon} size={18} color={active ? colors.error : colors.textMuted} />
-                    <Text style={[styles.allergenLabel, active && styles.allergenLabelActive]}>{a.key}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <Text style={styles.allergenNote}>Seçmezsen sorun yok — sonra profilden ekleyebilirsin</Text>
-          </View>
-        )}
-
-        {/* STEP 3: Serving + Finish */}
-        {step === 3 && (
-          <View style={styles.stepContainer}>
-            <View style={styles.stepIconCircle}>
-              <MaterialIcons name="people" size={32} color={colors.primary} />
-            </View>
-            <Text style={styles.stepTitle}>Porsiyon Sayısı</Text>
-            <Text style={styles.stepDesc}>Genellikle kaç kişilik yemek yapıyorsun?</Text>
-            <View style={styles.servingSelector}>
-              <TouchableOpacity
-                style={styles.servingBtn}
-                onPress={() => setServingSize(Math.max(1, servingSize - 1))}
-              >
-                <Text style={styles.servingBtnText}>−</Text>
-              </TouchableOpacity>
-              <View style={styles.servingDisplay}>
-                <Text style={styles.servingNumber}>{servingSize}</Text>
-                <Text style={styles.servingUnit}>kişilik</Text>
+      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+        <ScrollView
+          contentContainerStyle={s.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ===== STEP 0: Welcome + Cuisine + Serving ===== */}
+          {step === 0 && (
+            <View style={s.stepCenter}>
+              {/* Hero */}
+              <View style={s.heroIcon}>
+                <Text style={{ fontSize: 52 }}>👨‍🍳</Text>
               </View>
-              <TouchableOpacity
-                style={styles.servingBtn}
-                onPress={() => setServingSize(Math.min(12, servingSize + 1))}
-              >
-                <Text style={styles.servingBtnText}>+</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.readyCard}>
-              <MaterialIcons name="celebration" size={42} color={colors.secondary} />
-              <Text style={styles.readyTitle}>Hazırsın!</Text>
-              <Text style={styles.readyDesc}>
-                Tercihlerini kaydedip hemen yemek keşfetmeye başlayabilirsin.
+              <Text style={s.heroTitle}>
+                Mutfağının{'\n'}Dijital Şefi
               </Text>
+              <Text style={s.heroDesc}>
+                577+ tarif, AI destekli öneriler.{'\n'}
+                Hangi mutfakları sevdiğini ve kaç kişilik pişirdiğini söyle.
+              </Text>
+
+              {/* Cuisine selection */}
+              <Text style={s.sectionLabel}>Favori Mutfaklar</Text>
+              <View style={s.cuisineGrid}>
+                {cuisineOptions.map((c) => {
+                  const active = selectedCuisines.includes(c.slug);
+                  return (
+                    <TouchableOpacity
+                      key={c.slug}
+                      style={s.cuisineCircle}
+                      onPress={() => toggleCuisine(c.slug)}
+                    >
+                      <View style={[s.cuisineIconWrap, active && s.cuisineIconWrapActive]}>
+                        <Text style={s.cuisineEmoji}>{c.emoji}</Text>
+                        {active && (
+                          <View style={s.cuisineCheck}>
+                            <MaterialIcons name="check" size={12} color="#fff" />
+                          </View>
+                        )}
+                      </View>
+                      <Text style={[s.cuisineLabel, active && s.cuisineLabelActive]}>{c.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Serving size */}
+              <Text style={s.sectionLabel}>Porsiyon</Text>
+              <View style={s.servingRow}>
+                <TouchableOpacity
+                  style={s.servingBtn}
+                  onPress={() => setServingSize(Math.max(1, servingSize - 1))}
+                >
+                  <MaterialIcons name="remove" size={22} color={colors.primary} />
+                </TouchableOpacity>
+                <View style={s.servingCenter}>
+                  <Text style={s.servingNumber}>{servingSize}</Text>
+                  <Text style={s.servingUnit}>kişilik</Text>
+                </View>
+                <TouchableOpacity
+                  style={s.servingBtn}
+                  onPress={() => setServingSize(Math.min(12, servingSize + 1))}
+                >
+                  <MaterialIcons name="add" size={22} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={s.hint}>Seçmesen de tüm mutfakları görebilirsin</Text>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          )}
+
+          {/* ===== STEP 1: Diet + Allergens + Finish ===== */}
+          {step === 1 && (
+            <View style={s.stepCenter}>
+              <Text style={s.stepEmoji}>🥗</Text>
+              <Text style={s.stepTitle}>Beslenme & Alerjenler</Text>
+              <Text style={s.stepDesc}>Uygun olmayan tarifleri filtrelememize yardımcı olur</Text>
+
+              {/* Diet cards */}
+              <View style={s.dietGrid}>
+                {dietOptions.map((d) => {
+                  const active = !!selectedDiets[d.key];
+                  return (
+                    <TouchableOpacity
+                      key={d.key}
+                      style={[s.dietCard, active && s.dietCardActive]}
+                      onPress={() => toggleDiet(d.key)}
+                    >
+                      <Text style={s.dietEmoji}>{d.emoji}</Text>
+                      <Text style={[s.dietLabel, active && s.dietLabelActive]}>{d.label}</Text>
+                      <Text style={s.dietDesc}>{d.desc}</Text>
+                      {active && (
+                        <View style={s.dietCheck}>
+                          <MaterialIcons name="check" size={14} color="#fff" />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Allergens */}
+              <Text style={s.allergenTitle}>Alerjenler</Text>
+              <View style={s.allergenRow}>
+                {allergenOptions.map((a) => {
+                  const active = selectedAllergens.includes(a);
+                  return (
+                    <TouchableOpacity
+                      key={a}
+                      style={[s.allergenChip, active && s.allergenChipActive]}
+                      onPress={() => toggleAllergen(a)}
+                    >
+                      {active && <MaterialIcons name="close" size={14} color={colors.error} />}
+                      <Text style={[s.allergenText, active && s.allergenTextActive]}>{a}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Ready summary */}
+              <View style={s.readyCard}>
+                <MaterialIcons name="auto-awesome" size={32} color={colors.primary} />
+                <Text style={s.readyTitle}>Hazırsın!</Text>
+                <Text style={s.readyDesc}>
+                  {selectedCuisines.length > 0
+                    ? `${selectedCuisines.length} mutfak · `
+                    : ''}
+                  {Object.values(selectedDiets).filter(Boolean).length > 0
+                    ? `${Object.values(selectedDiets).filter(Boolean).length} diyet · `
+                    : ''}
+                  {servingSize} kişilik porsiyonlar
+                </Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+      </Animated.View>
 
       {/* Bottom navigation */}
-      <View style={styles.bottomBar}>
+      <View style={s.bottomBar}>
         {step === 0 ? (
           <>
-            <TouchableOpacity onPress={handleSkip}>
-              <Text style={styles.skipText}>Atla</Text>
+            <TouchableOpacity onPress={handleSkip} hitSlop={12}>
+              <Text style={s.skipText}>Atla</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.nextBtn} onPress={next}>
-              <Text style={styles.nextBtnText}>Başlayalım</Text>
-              <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
-            </TouchableOpacity>
-          </>
-        ) : step < TOTAL_STEPS - 1 ? (
-          <>
-            <TouchableOpacity style={styles.backBtn} onPress={back}>
-              <MaterialIcons name="arrow-back" size={18} color={colors.primary} />
-              <Text style={styles.backText}>Geri</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSkip}>
-              <Text style={styles.skipText}>Atla</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.nextBtn} onPress={next}>
-              <Text style={styles.nextBtnText}>İleri</Text>
+            <TouchableOpacity style={s.nextBtn} onPress={next}>
+              <Text style={s.nextBtnText}>Devam</Text>
               <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <TouchableOpacity style={styles.backBtn} onPress={back}>
+            <TouchableOpacity style={s.backBtn} onPress={back}>
               <MaterialIcons name="arrow-back" size={18} color={colors.primary} />
-              <Text style={styles.backText}>Geri</Text>
+              <Text style={s.backText}>Geri</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.finishBtn, saving && { opacity: 0.5 }]}
+              style={[s.finishBtn, saving && { opacity: 0.5 }]}
               onPress={handleFinish}
               disabled={saving}
             >
               <MaterialIcons name="auto-awesome" size={18} color={colors.onPrimary} />
-              <Text style={styles.finishBtnText}>
+              <Text style={s.finishBtnText}>
                 {saving ? 'Kaydediliyor...' : 'Keşfetmeye Başla!'}
               </Text>
             </TouchableOpacity>
@@ -261,135 +278,294 @@ export default function OnboardingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingBottom: 120 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 120,
+    ...(isWeb ? { maxWidth: 600, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
+  },
 
   // Progress
-  progressContainer: {
+  progressRow: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
-    paddingTop: spacing.xl,
+    paddingTop: Platform.OS === 'web' ? spacing.lg : spacing.xl + 16,
     paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
-  progressDot: {
-    width: (width - 120) / TOTAL_STEPS,
+  progressBar: {
+    flex: 1,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.borderLight,
+    backgroundColor: colors.surfaceContainerHigh,
   },
-  progressDotActive: { backgroundColor: colors.primary },
+  progressBarActive: { backgroundColor: colors.primary },
 
-  // Step container
-  stepContainer: { alignItems: 'center', paddingTop: spacing.lg },
+  // Steps
+  stepCenter: { alignItems: 'center', paddingTop: spacing.md },
 
-  // Hero (Welcome)
-  heroIconCircle: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+  // Hero
+  heroIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  heroTitle: {
+    fontSize: fontSize.title,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.text,
+    textAlign: 'center',
+    lineHeight: 40,
+    letterSpacing: -1,
+  },
+  heroDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.bodyRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
     marginBottom: spacing.md,
   },
-  heroTitle: { fontSize: fontSize.title, fontWeight: '800', color: colors.text, textAlign: 'center', lineHeight: 42 },
-  heroDesc: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.md, lineHeight: 22, paddingHorizontal: spacing.md },
-  heroSub: { fontSize: fontSize.sm, color: colors.textMuted, textAlign: 'center', marginTop: spacing.md },
+
+  // Section labels
+  sectionLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.headingBold,
+    color: colors.text,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
 
   // Step headers
-  stepIconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  stepEmoji: { fontSize: 44, marginBottom: spacing.xs },
+  stepTitle: {
+    fontSize: fontSize.xxl,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.text,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  stepDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.bodyRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  hint: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.bodyRegular,
+    color: colors.textMuted,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+  },
+
+  // Cuisine grid
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.md,
+    width: '100%' as any,
+  },
+  cuisineCircle: {
+    alignItems: 'center',
+    width: (width - 80) / 5 > 72 ? 72 : (width - 80) / 5,
+  },
+  cuisineIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceContainerLow,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2.5,
+    borderColor: 'transparent',
+    position: 'relative',
+  },
+  cuisineIconWrapActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer,
+  },
+  cuisineEmoji: { fontSize: 24 },
+  cuisineCheck: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.background,
+  },
+  cuisineLabel: {
+    fontSize: 10,
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
+    marginTop: 3,
+    textAlign: 'center',
+  },
+  cuisineLabelActive: {
+    color: colors.primary,
+    fontFamily: fonts.bodySemiBold,
+  },
+
+  // Serving
+  servingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  servingBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.primaryContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
   },
-  stepTitle: { fontSize: fontSize.xxl, fontWeight: '800', color: colors.text, textAlign: 'center' },
-  stepDesc: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.lg },
+  servingCenter: { alignItems: 'center' },
+  servingNumber: {
+    fontSize: 48,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.primary,
+    lineHeight: 54,
+  },
+  servingUnit: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
+  },
 
-  // No preference
-  noPrefBtn: {
-    width: '100%',
-    backgroundColor: colors.surface,
+  // Diet cards
+  dietGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    width: '100%' as any,
+    marginBottom: spacing.lg,
+  },
+  dietCard: {
+    width: (width - 72) / 2,
+    backgroundColor: colors.surfaceContainerLowest,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     borderWidth: 2,
     borderColor: colors.borderLight,
-    marginBottom: spacing.sm,
+    position: 'relative',
   },
-  noPrefBtnActive: { borderColor: colors.success, backgroundColor: colors.success + '15' },
-  noPrefText: { fontSize: fontSize.md, fontWeight: '600', color: colors.textSecondary },
-  noPrefTextActive: { color: colors.success, fontWeight: '700' },
-
-  // Diet options grid
-  optionsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, width: '100%' },
-  optionCard: {
-    width: (width - 80) / 2,
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+  dietCardActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryContainer + '30',
+  },
+  dietEmoji: { fontSize: 28, marginBottom: 4 },
+  dietLabel: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.headingBold,
+    color: colors.text,
+  },
+  dietLabelActive: { color: colors.primary },
+  dietDesc: {
+    fontSize: fontSize.xs,
+    fontFamily: fonts.bodyRegular,
+    color: colors.textMuted,
+    marginTop: 2,
+    textAlign: 'center',
+  },
+  dietCheck: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.borderLight,
+    justifyContent: 'center',
   },
-  optionCardActive: { borderColor: colors.primary, backgroundColor: colors.primaryLight + '15' },
-  optionLabel: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
-  optionLabelActive: { color: colors.primary },
-  optionDesc: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
-  checkBadge: { position: 'absolute', top: 8, right: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  checkText: { color: colors.textInverse, fontSize: 13, fontWeight: '800' },
 
-  // Allergen grid
-  allergenGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm, width: '100%' },
+  // Allergens
+  allergenTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fonts.headingBold,
+    color: colors.text,
+    marginBottom: spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  allergenRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+    width: '100%' as any,
+    marginBottom: spacing.lg,
+  },
   allergenChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 8,
     borderRadius: borderRadius.full,
-    borderWidth: 2,
-    borderColor: colors.border,
-    backgroundColor: colors.surface,
-    gap: 6,
+    borderWidth: 1.5,
+    borderColor: colors.outlineVariant,
+    backgroundColor: colors.surfaceContainerLowest,
   },
-  allergenChipActive: { borderColor: colors.error, backgroundColor: '#FEE2E2' },
-  allergenLabel: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: '500' },
-  allergenLabelActive: { color: colors.error, fontWeight: '700' },
-  allergenNote: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.lg, textAlign: 'center' },
-
-  // Serving selector
-  servingSelector: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.md },
-  servingBtn: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primaryContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
+  allergenChipActive: {
+    borderColor: colors.error,
+    backgroundColor: colors.error + '12',
   },
-  servingBtnText: { fontSize: 28, color: colors.onPrimaryContainer, fontWeight: '700', lineHeight: 32 },
-  servingDisplay: { alignItems: 'center' },
-  servingNumber: { fontSize: 48, fontWeight: '800', color: colors.primary },
-  servingUnit: { fontSize: fontSize.sm, color: colors.textSecondary },
+  allergenText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.bodyMedium,
+    color: colors.textSecondary,
+  },
+  allergenTextActive: {
+    color: colors.error,
+    fontFamily: fonts.bodySemiBold,
+  },
 
   // Ready card
   readyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceContainerLowest,
+    borderRadius: borderRadius.xl,
     padding: spacing.lg,
-    marginTop: spacing.xl,
     alignItems: 'center',
-    width: '100%',
+    width: '100%' as any,
     borderWidth: 1,
-    borderColor: colors.borderLight,
+    borderColor: colors.primaryContainer,
   },
-  readyTitle: { fontSize: fontSize.xl, fontWeight: '800', color: colors.text },
-  readyDesc: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs },
+  readyTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fonts.headingBold,
+    color: colors.text,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
+  readyDesc: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.bodyRegular,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
 
   // Bottom bar
   bottomBar: {
@@ -402,32 +578,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    paddingBottom: spacing.xl,
-    backgroundColor: colors.surface,
+    paddingBottom: Platform.OS === 'web' ? spacing.md : spacing.xl,
+    backgroundColor: colors.surfaceContainerLowest,
     borderTopWidth: 1,
     borderTopColor: colors.borderLight,
   },
-  skipText: { color: colors.textMuted, fontSize: fontSize.md, fontWeight: '500' },
-  backBtn: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4 },
-  backText: { color: colors.primary, fontSize: fontSize.md, fontWeight: '600' },
+  skipText: {
+    color: colors.textMuted,
+    fontSize: fontSize.md,
+    fontFamily: fonts.bodyMedium,
+  },
+  backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  backText: {
+    color: colors.primary,
+    fontSize: fontSize.md,
+    fontFamily: fonts.headingSemiBold,
+  },
   nextBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.full,
   },
-  nextBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: fontSize.md },
+  nextBtnText: {
+    color: colors.onPrimary,
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+  },
   finishBtn: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.sm + 4,
     borderRadius: borderRadius.full,
   },
-  finishBtnText: { color: colors.onPrimary, fontWeight: '700', fontSize: fontSize.md },
+  finishBtnText: {
+    color: colors.onPrimary,
+    fontFamily: fonts.headingBold,
+    fontSize: fontSize.md,
+  },
 });

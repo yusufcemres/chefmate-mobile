@@ -19,9 +19,13 @@ import { api } from '../../src/api/client';
 import { useShoppingStore } from '../../src/stores/shopping';
 import { useMealPlanStore } from '../../src/stores/meal-plans';
 import { useFavoritesStore } from '../../src/stores/favorites';
+import { useOfflineCacheStore } from '../../src/stores/offline-cache';
 import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { hapticSelection } from '../../src/utils/haptics';
 import type { Recipe, MealPlan } from '../../src/types';
 import AiRecipeSuggestion from '../../src/components/AiRecipeSuggestion';
+import RecipeReviews from '../../src/components/RecipeReviews';
+import { findSubstitutions, Substitution } from '../../src/data/ingredient-substitutions';
 
 interface NutritionInfo {
   recipeId: string;
@@ -52,6 +56,7 @@ export default function RecipeDetailScreen() {
   const [showNutrition, setShowNutrition] = useState(false);
   const [servings, setServings] = useState<number>(0); // 0 = original
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
+  const [showSubsFor, setShowSubsFor] = useState<string | null>(null);
   const { generateFromRecipe } = useShoppingStore();
   const { plans, fetchPlans, addItem: addToPlan } = useMealPlanStore();
   const [showPlanPicker, setShowPlanPicker] = useState(false);
@@ -64,12 +69,20 @@ export default function RecipeDetailScreen() {
       .then((res) => {
         setRecipe(res as any);
         setServings((res as any).servingSize || 1);
+        // Cache for offline access
+        useOfflineCacheStore.getState().cacheRecipe(res).catch(() => {});
+        // Increment view count after successful load
+        api.post(`/recipes/${id}/view`).catch(() => {});
       })
-      .catch(() => {})
+      .catch(() => {
+        // Try offline cache fallback
+        const cached = useOfflineCacheStore.getState().getCachedRecipe(id!);
+        if (cached) {
+          setRecipe(cached as any);
+          setServings(cached.servingSize || 1);
+        }
+      })
       .finally(() => setLoading(false));
-
-    // Increment view count
-    api.post(`/recipes/${id}/view`).catch(() => {});
   }, [id]);
 
   const loadNutrition = async () => {
@@ -104,6 +117,7 @@ export default function RecipeDetailScreen() {
   };
 
   const toggleIngredientCheck = (ingId: string) => {
+    hapticSelection();
     setCheckedIngredients((prev) => {
       const next = new Set(prev);
       if (next.has(ingId)) next.delete(ingId);
@@ -235,6 +249,11 @@ export default function RecipeDetailScreen() {
             <TouchableOpacity style={styles.heroActionBtn} onPress={handleShare}>
               <MaterialIcons name="share" size={20} color="#fff" />
             </TouchableOpacity>
+            {Platform.OS === 'web' && (
+              <TouchableOpacity style={styles.heroActionBtn} onPress={() => window.print()}>
+                <MaterialIcons name="print" size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
           {/* Overlay info */}
           <View style={styles.heroOverlay}>
@@ -289,10 +308,34 @@ export default function RecipeDetailScreen() {
           )}
         </View>
 
+        {/* ===== Compact Action Bar ===== */}
+        <View style={styles.actionBar}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => toggleFavorite(recipe.id)}>
+            <MaterialIcons
+              name={isFavorite(recipe.id) ? 'favorite' : 'favorite-border'}
+              size={22}
+              color={isFavorite(recipe.id) ? '#FF4B6E' : colors.textSecondary}
+            />
+            <Text style={styles.actionLabel}>Favori</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlanPicker(true)}>
+            <MaterialIcons name="calendar-today" size={22} color={colors.textSecondary} />
+            <Text style={styles.actionLabel}>Plana Ekle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleAddToShoppingList}>
+            <MaterialIcons name="shopping-cart" size={22} color={colors.textSecondary} />
+            <Text style={styles.actionLabel}>Listeye</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+            <MaterialIcons name="share" size={22} color={colors.textSecondary} />
+            <Text style={styles.actionLabel}>Paylaş</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Body content */}
         <View style={styles.body}>
           {/* Description */}
-          <Text style={styles.desc}>{recipe.description}</Text>
+          {recipe.description ? <Text style={styles.desc}>{recipe.description}</Text> : null}
 
           {/* Tags */}
           {tags.length > 0 && (
@@ -322,8 +365,24 @@ export default function RecipeDetailScreen() {
               >
                 <MaterialIcons name="add" size={18} color={colors.primary} />
               </TouchableOpacity>
+              {servings !== recipe.servingSize && (
+                <TouchableOpacity
+                  style={[styles.portionBtn, { marginLeft: 8 }]}
+                  onPress={() => setServings(recipe.servingSize)}
+                >
+                  <MaterialIcons name="restart-alt" size={18} color={colors.textMuted} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
+          {scaleFactor !== 1 && (recipe as any).totalCalories > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8, paddingHorizontal: 4 }}>
+              <MaterialIcons name="local-fire-department" size={14} color={colors.warning} />
+              <Text style={{ fontSize: 13, color: colors.textSecondary, fontFamily: 'Manrope-Medium' }}>
+                {Math.round((recipe as any).totalCalories * scaleFactor)} kcal ({servings} kişilik)
+              </Text>
+            </View>
+          )}
 
           {/* ===== Ingredients ===== */}
           <View style={styles.sectionHeader}>
@@ -335,34 +394,58 @@ export default function RecipeDetailScreen() {
               const isChecked = checkedIngredients.has(ing.id);
               const qty = ing.quantityDisplay ?? ing.requiredQuantity;
               const scaledQty = qty ? Math.round(qty * scaleFactor * 10) / 10 : qty;
+              const subs = findSubstitutions(ing.ingredientNameSnapshot);
+              const isSubOpen = showSubsFor === ing.id;
               return (
-                <TouchableOpacity
-                  key={ing.id}
-                  style={[styles.ingredientRow, isChecked && styles.ingredientRowChecked]}
-                  onPress={() => toggleIngredientCheck(ing.id)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
-                    {isChecked && <MaterialIcons name="check" size={14} color="#fff" />}
-                  </View>
-                  <Text style={[styles.ingredientName, isChecked && styles.ingredientNameChecked]}>
-                    {ing.ingredientNameSnapshot}
-                  </Text>
-                  <View style={[styles.roleBadge, {
-                    backgroundColor: (ing.role === 'MAIN' || ing.role === 'main') ? colors.primaryContainer + '60' :
-                      (ing.role === 'SEASONING' || ing.role === 'seasoning') ? colors.tertiaryContainer + '60' :
-                      colors.surfaceContainerHigh,
-                  }]}>
-                    <Text style={[styles.roleText, {
-                      color: (ing.role === 'MAIN' || ing.role === 'main') ? colors.primary :
-                        (ing.role === 'SEASONING' || ing.role === 'seasoning') ? colors.tertiary :
-                        colors.textMuted,
-                    }]}>{roleLabel[ing.role] || ing.role}</Text>
-                  </View>
-                  <Text style={[styles.ingredientQty, isChecked && { color: colors.textMuted }]}>
-                    {scaledQty} {ing.displayUnit ?? ing.requiredUnit}
-                  </Text>
-                </TouchableOpacity>
+                <View key={ing.id}>
+                  <TouchableOpacity
+                    style={[styles.ingredientRow, isChecked && styles.ingredientRowChecked]}
+                    onPress={() => toggleIngredientCheck(ing.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+                      {isChecked && <MaterialIcons name="check" size={14} color="#fff" />}
+                    </View>
+                    <Text style={[styles.ingredientName, isChecked && styles.ingredientNameChecked]}>
+                      {ing.ingredientNameSnapshot}
+                    </Text>
+                    {subs && (
+                      <TouchableOpacity
+                        style={styles.subBtn}
+                        onPress={() => setShowSubsFor(isSubOpen ? null : ing.id)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <MaterialIcons name="swap-horiz" size={16} color={colors.tertiary} />
+                      </TouchableOpacity>
+                    )}
+                    <View style={[styles.roleBadge, {
+                      backgroundColor: (ing.role === 'MAIN' || ing.role === 'main') ? colors.primaryContainer + '60' :
+                        (ing.role === 'SEASONING' || ing.role === 'seasoning') ? colors.tertiaryContainer + '60' :
+                        colors.surfaceContainerHigh,
+                    }]}>
+                      <Text style={[styles.roleText, {
+                        color: (ing.role === 'MAIN' || ing.role === 'main') ? colors.primary :
+                          (ing.role === 'SEASONING' || ing.role === 'seasoning') ? colors.tertiary :
+                          colors.textMuted,
+                      }]}>{roleLabel[ing.role] || ing.role}</Text>
+                    </View>
+                    <Text style={[styles.ingredientQty, isChecked && { color: colors.textMuted }]}>
+                      {scaledQty} {ing.displayUnit ?? ing.requiredUnit}
+                    </Text>
+                  </TouchableOpacity>
+                  {isSubOpen && subs && (
+                    <View style={styles.subPanel}>
+                      <Text style={styles.subPanelTitle}>Yerine kullanılabilir:</Text>
+                      {subs.map((s, i) => (
+                        <View key={i} style={styles.subItem}>
+                          <Text style={styles.subItemName}>{s.name}</Text>
+                          <Text style={styles.subItemRatio}>{s.ratio}</Text>
+                          {s.note && <Text style={styles.subItemNote}>{s.note}</Text>}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
               );
             })}
           </View>
@@ -403,6 +486,9 @@ export default function RecipeDetailScreen() {
             </View>
           )}
 
+          {/* Reviews Section */}
+          <RecipeReviews recipeId={recipe.id} ratingAvg={recipe.ratingAvg} ratingCount={recipe.ratingCount || 0} />
+
           {/* AI Recipe Suggestion */}
           <AiRecipeSuggestion recipeId={recipe.id} />
 
@@ -439,17 +525,6 @@ export default function RecipeDetailScreen() {
               )}
             </View>
           )}
-
-          {/* Action Buttons */}
-          <TouchableOpacity style={styles.shopBtn} onPress={handleAddToShoppingList}>
-            <MaterialIcons name="shopping-cart" size={20} color={colors.onSecondary} />
-            <Text style={styles.shopBtnText}>Eksik Malzemeleri Listeye Ekle</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.planBtn} onPress={() => setShowPlanPicker(!showPlanPicker)}>
-            <MaterialIcons name="calendar-today" size={20} color={colors.textInverse} />
-            <Text style={styles.planBtnText}>Yemek Planına Ekle</Text>
-          </TouchableOpacity>
 
           {showPlanPicker && (
             <View style={styles.planPicker}>
@@ -605,6 +680,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  // Compact Action Bar
+  actionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh + '50',
+  },
+  actionBtn: {
+    alignItems: 'center',
+    gap: 2,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  actionLabel: {
+    fontSize: 10,
+    fontFamily: 'Manrope-SemiBold',
+    color: colors.textSecondary,
+    letterSpacing: 0.3,
+  },
+
   // Floating Bar
   floatingBar: {
     flexDirection: 'row',
@@ -696,6 +794,41 @@ const styles = StyleSheet.create({
   roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: borderRadius.full },
   roleText: { fontSize: 10, fontFamily: 'Jakarta-Bold', textTransform: 'uppercase', letterSpacing: 0.5 },
   ingredientQty: { fontSize: fontSize.md, fontFamily: 'Jakarta-Bold', color: colors.primary },
+
+  // Substitution
+  subBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: colors.tertiaryContainer + '40',
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+  },
+  subPanel: {
+    backgroundColor: colors.tertiaryContainer + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.surfaceContainerHigh,
+  },
+  subPanelTitle: {
+    fontSize: fontSize.xs,
+    fontFamily: 'Jakarta-Bold',
+    color: colors.tertiary,
+    marginBottom: 4,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+  subItem: {
+    flexDirection: 'row' as const,
+    flexWrap: 'wrap' as const,
+    alignItems: 'center' as const,
+    gap: 6,
+    paddingVertical: 3,
+  },
+  subItemName: { fontSize: fontSize.sm, fontFamily: 'Manrope-SemiBold', color: colors.text },
+  subItemRatio: { fontSize: fontSize.xs, fontFamily: 'Jakarta-Bold', color: colors.tertiary, backgroundColor: colors.tertiaryContainer + '40', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4 },
+  subItemNote: { fontSize: fontSize.xs, fontFamily: 'Manrope-Regular', color: colors.textMuted, fontStyle: 'italic' as const },
 
   // Steps (editorial big numbers)
   stepList: { gap: spacing.lg, marginBottom: spacing.md },

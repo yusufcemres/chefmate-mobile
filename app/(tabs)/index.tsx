@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   TextInput,
   ScrollView,
   Image,
+  Modal,
+  Alert,
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -183,6 +185,40 @@ export default function HomeScreen() {
   const [searchFocused, setSearchFocused] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const browseCursorRef = useRef<string | null>(null);
+
+  // URL Import state
+  const [showImport, setShowImport] = useState(false);
+  const [importUrl, setImportUrl] = useState('');
+  const [importing, setImporting] = useState(false);
+
+  const isVideoUrl = (url: string): boolean => {
+    return /tiktok\.com|instagram\.com\/reel|instagram\.com\/p|youtube\.com\/shorts|youtu\.be/i.test(url);
+  };
+
+  const handleImportUrl = async () => {
+    if (!importUrl.trim()) return;
+    setImporting(true);
+    try {
+      const url = importUrl.trim();
+      const endpoint = isVideoUrl(url) ? '/recipes/import-video' : '/recipes/import-url';
+      const res = await api.post<any>(endpoint, { url });
+      const recipe = (res as any).recipe;
+      const importType = (res as any).parsed?.importType;
+      setShowImport(false);
+      setImportUrl('');
+      const source = importType === 'video-ai' ? ' (AI ile video tarifinden)' : '';
+      const msg = `"${recipe.title}" başarıyla içe aktarıldı${source}!`;
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('İçe Aktarıldı!', msg);
+      if (recipe.id) router.push(`/recipe/${recipe.id}`);
+    } catch (err: any) {
+      const msg = err.message || 'İçe aktarma başarısız.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Hata', msg);
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const season = getCurrentSeason();
 
@@ -366,15 +402,23 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Search Bar */}
+        {/* Smart Search Bar — search + import merged */}
         <View style={styles.searchBar}>
           <MaterialIcons name="search" size={20} color={colors.textMuted} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Tarif ara..."
+            placeholder="Ara veya link yapıştır..."
             placeholderTextColor={colors.textMuted}
             value={searchQuery}
-            onChangeText={handleSearch}
+            onChangeText={(text) => {
+              // Detect URL paste → open import modal
+              if (text.startsWith('http://') || text.startsWith('https://')) {
+                setImportUrl(text);
+                setShowImport(true);
+                return;
+              }
+              handleSearch(text);
+            }}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
             returnKeyType="search"
@@ -408,226 +452,107 @@ export default function HomeScreen() {
     );
   }
 
+  // Merged recommendation stream (recommendations + trending + seasonal deduplicated)
+  const mergedStream = useMemo(() => {
+    const seen = new Set<string>();
+    const stream: any[] = [];
+    // First: recommendations (highest priority)
+    for (const rec of recommendations) {
+      if (!seen.has(rec.recipe.id)) { seen.add(rec.recipe.id); stream.push({ ...rec.recipe, _score: rec.finalScore }); }
+    }
+    // Then: trending
+    for (const r of trending) {
+      if (!seen.has(r.id)) { seen.add(r.id); stream.push(r); }
+    }
+    // Then: seasonal
+    for (const r of seasonal) {
+      if (!seen.has(r.id)) { seen.add(r.id); stream.push(r); }
+    }
+    return stream.slice(0, 12);
+  }, [recommendations, trending, seasonal]);
+
+  // Hero card: top recommendation that matches inventory
+  const heroRecipe = mergedStream[0] || null;
+
   // ===== MAIN SCROLLABLE CONTENT =====
-  // We use a single FlatList with ListHeaderComponent for the sections above the grid
   const renderListHeader = () => (
     <View>
       {renderHeader()}
 
-      {/* ===== Circular Category Icons (Talabat pattern) ===== */}
-      {categories.length > 0 && (
-        <View style={styles.section}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-            {categories.map((cat) => (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.categoryCircle, activeCategory === cat.slug && styles.categoryCircleActive]}
-                onPress={() => onCategoryPress(cat.slug)}
-              >
-                <View style={[styles.categoryIconWrap, activeCategory === cat.slug && styles.categoryIconWrapActive]}>
-                  <Text style={styles.categoryEmoji}>{cat.emoji || '🍽️'}</Text>
-                </View>
-                <Text style={[styles.categoryLabel, activeCategory === cat.slug && styles.categoryLabelActive]} numberOfLines={1}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+      {/* ===== Hero Card: "Bugün Bunu Pişir" ===== */}
+      {heroRecipe && !activeCategory && (
+        <TouchableOpacity
+          style={styles.heroCard}
+          onPress={() => router.push(`/recipe/${heroRecipe.id}`)}
+          activeOpacity={0.9}
+        >
+          {heroRecipe.imageUrl ? (
+            <Image source={{ uri: heroRecipe.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+          ) : (
+            <View style={[styles.heroImage, styles.heroImageFallback]}>
+              <Text style={{ fontSize: 48 }}>{getCategoryTag(heroRecipe)?.emoji || '🍽️'}</Text>
+            </View>
+          )}
+          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.heroGradient} />
+          <View style={styles.heroContent}>
+            <Text style={styles.heroLabel}>Bugün bunu pişir</Text>
+            <Text style={styles.heroTitle} numberOfLines={2}>{heroRecipe.title}</Text>
+            <Text style={styles.heroMeta}>
+              {heroRecipe.totalTimeMinutes || 0}dk · {difficultyLabel[heroRecipe.difficulty] || heroRecipe.difficulty}
+              {heroRecipe._score ? ` · %${Math.round(heroRecipe._score > 1 ? heroRecipe._score : heroRecipe._score * 100)} eşleşme` : ''}
+            </Text>
+          </View>
+        </TouchableOpacity>
       )}
 
-      {/* ===== Cuisine Tab Bar (Talabat tab pattern) ===== */}
-      {cuisines.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cuisineScroll}>
-          <TouchableOpacity
-            style={[styles.cuisineChip, !activeCuisine && styles.cuisineChipActive]}
-            onPress={() => onCuisinePress('')}
-          >
-            <Text style={[styles.cuisineChipText, !activeCuisine && styles.cuisineChipTextActive]}>Tümü</Text>
-          </TouchableOpacity>
-          {cuisines.map((c) => (
+      {/* ===== Category Pills (single row) ===== */}
+      {categories.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+          {categories.map((cat) => (
             <TouchableOpacity
-              key={c.id}
-              style={[styles.cuisineChip, activeCuisine === c.slug && styles.cuisineChipActive]}
-              onPress={() => onCuisinePress(c.slug)}
+              key={cat.id}
+              style={[styles.categoryPill, activeCategory === cat.slug && styles.categoryPillActive]}
+              onPress={() => onCategoryPress(cat.slug)}
             >
-              <Text style={[styles.cuisineChipText, activeCuisine === c.slug && styles.cuisineChipTextActive]}>
-                {c.emoji} {c.name?.replace(' Mutfağı', '')}
+              <Text style={styles.categoryPillEmoji}>{cat.emoji || '🍽️'}</Text>
+              <Text style={[styles.categoryPillText, activeCategory === cat.slug && styles.categoryPillTextActive]}>
+                {cat.name}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       )}
 
-      {/* When a filter is active, skip discovery sections and show filtered results directly */}
-      {!(activeCategory || activeCuisine) && (
-        <>
-          {/* ===== Picks for You / Recommendations (Talabat "Picks for you 🔥") ===== */}
-          {recommendations.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🔥 Sana Özel Tarifler</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                {recommendations.map((rec) => {
-                  const r = rec.recipe;
-                  const scorePercent = rec.finalScore > 1 ? Math.round(rec.finalScore) : Math.round(rec.finalScore * 100);
-                  const catTag = getCategoryTag(r);
-                  return (
-                    <TouchableOpacity
-                      key={r.id}
-                      style={styles.pickCard}
-                      onPress={() => router.push(`/recipe/${r.id}`)}
-                      activeOpacity={0.85}
-                    >
-                      <View style={styles.pickImageWrap}>
-                        {r.imageUrl ? (
-                          <Image source={{ uri: r.imageUrl }} style={styles.pickImage} resizeMode="cover" />
-                        ) : (
-                          <View style={styles.pickImageFallback}>
-                            <Text style={{ fontSize: 32 }}>{catTag?.emoji || '🍽️'}</Text>
-                          </View>
-                        )}
-                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.pickGradient} />
-                        <View style={styles.matchBadge}>
-                          <Text style={styles.matchBadgeText}>%{scorePercent}</Text>
-                        </View>
-                      </View>
-                      <Text style={styles.pickTitle} numberOfLines={2}>{r.title}</Text>
-                      <Text style={styles.pickMeta}>
-                        {r.totalTimeMinutes || 0}dk · {difficultyLabel[r.difficulty] || r.difficulty}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ===== Trending Bento Grid (Talabat "Top rated" + editorial) ===== */}
-          {trending.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🏆 En Beğenilen Tarifler</Text>
-              <View style={styles.bentoGrid}>
-                {/* Large card */}
-                {trending[0] && (
-                  <View style={styles.bentoLarge}>
-                    <RecipeCard item={trending[0]} onFavToggle={toggleFav} isFav={isFavorite(trending[0].id)} size="large" />
-                  </View>
-                )}
-                {/* Two small cards */}
-                <View style={styles.bentoSmallCol}>
-                  {trending[1] && (
-                    <RecipeCard item={trending[1]} onFavToggle={toggleFav} isFav={isFavorite(trending[1].id)} size="small" />
-                  )}
-                  {trending[2] && (
-                    <RecipeCard item={trending[2]} onFavToggle={toggleFav} isFav={isFavorite(trending[2].id)} size="small" />
-                  )}
-                </View>
+      {/* ===== Sana Özel (merged stream) ===== */}
+      {!activeCategory && mergedStream.length > 1 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Sana Özel</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+            {mergedStream.slice(1, 8).map((r) => (
+              <View key={r.id} style={styles.horizontalCard}>
+                <RecipeCard item={r} onFavToggle={toggleFav} isFav={isFavorite(r.id)} size="small" />
               </View>
-              {/* Remaining trending as horizontal scroll */}
-              {trending.length > 3 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                  {trending.slice(3).map((r) => (
-                    <View key={r.id} style={styles.horizontalCard}>
-                      <RecipeCard item={r} onFavToggle={toggleFav} isFav={isFavorite(r.id)} />
-                    </View>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
-          )}
-
-          {/* ===== Seasonal Section ===== */}
-          {seasonal.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{season.emoji} {season.name} Tarifleri</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                {seasonal.map((r) => (
-                  <TouchableOpacity
-                    key={r.id}
-                    style={styles.seasonalCard}
-                    onPress={() => router.push(`/recipe/${r.id}`)}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.seasonalImageWrap}>
-                      {r.imageUrl ? (
-                        <Image source={{ uri: r.imageUrl }} style={styles.seasonalImage} resizeMode="cover" />
-                      ) : (
-                        <View style={styles.seasonalImageFallback}>
-                          <Text style={{ fontSize: 36 }}>{getCategoryTag(r)?.emoji || season.emoji}</Text>
-                        </View>
-                      )}
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.6)']} style={styles.seasonalGradient} />
-                      <View style={styles.seasonalBadge}>
-                        <Text style={styles.seasonalBadgeText}>{season.emoji} {season.name}</Text>
-                      </View>
-                      <Text style={styles.seasonalTitle} numberOfLines={2}>{r.title}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ===== Collections Section ===== */}
-          {collections.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📚 Koleksiyonlar</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                {collections.map((col) => (
-                  <TouchableOpacity
-                    key={col.id}
-                    style={styles.collectionCard}
-                    onPress={() => router.push(`/collection/${col.slug}`)}
-                    activeOpacity={0.85}
-                  >
-                    <View style={styles.collectionImageWrap}>
-                      {col.imageUrl ? (
-                        <Image source={{ uri: col.imageUrl }} style={styles.collectionImage} resizeMode="cover" />
-                      ) : (
-                        <View style={styles.collectionImageFallback}>
-                          <MaterialIcons name="collections-bookmark" size={28} color={colors.textMuted} />
-                        </View>
-                      )}
-                      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.65)']} style={styles.collectionGradient} />
-                      <View style={styles.collectionInfo}>
-                        <Text style={styles.collectionName} numberOfLines={1}>{col.name}</Text>
-                        <Text style={styles.collectionCount}>{col._count?.recipes || 0} tarif</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-        </>
+            ))}
+          </ScrollView>
+        </View>
       )}
 
-      {/* ===== All Recipes / Filtered Results Header ===== */}
+      {/* ===== Browse Header ===== */}
       <View style={styles.allRecipesHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
-          <Text style={styles.sectionTitle}>
-            {(activeCategory || activeCuisine)
-              ? `🔍 ${
-                  activeCategory
-                    ? categories.find(c => c.slug === activeCategory)?.name || activeCategory
-                    : ''
-                }${activeCategory && activeCuisine ? ' · ' : ''}${
-                  activeCuisine
-                    ? cuisines.find(c => c.slug === activeCuisine)?.name || activeCuisine
-                    : ''
-                } (${allRecipes.length}${hasMore ? '+' : ''})`
-              : `📖 Tüm Tarifler ${allRecipes.length > 0 ? `(${allRecipes.length}${hasMore ? '+' : ''})` : ''}`
-            }
-          </Text>
-          {(activeCategory || activeCuisine) && (
-            <TouchableOpacity
-              onPress={() => { setActiveCategory(null); setActiveCuisine(null); fetchAllRecipes(true, null, null); }}
-              style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: colors.primary + '15', borderRadius: 16 }}
-            >
-              <Text style={{ color: colors.primary, fontFamily: 'Jakarta-SemiBold', fontSize: fontSize.xs }}>Temizle</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+        <Text style={styles.sectionTitle}>
+          {activeCategory
+            ? `${categories.find(c => c.slug === activeCategory)?.emoji || '🔍'} ${categories.find(c => c.slug === activeCategory)?.name || ''}`
+            : 'Keşfet'
+          }
+        </Text>
+        {activeCategory && (
+          <TouchableOpacity
+            onPress={() => { setActiveCategory(null); fetchAllRecipes(true, null, null); }}
+            style={styles.clearFilterBtn}
+          >
+            <Text style={styles.clearFilterText}>Temizle</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -676,6 +601,64 @@ export default function HomeScreen() {
         />
       }
     />
+
+    {/* URL Import Modal */}
+    <Modal visible={showImport} animationType="slide" transparent>
+      <View style={styles.importOverlay}>
+        <View style={styles.importContent}>
+          <Text style={styles.importTitle}>Tarif İçe Aktar</Text>
+          <Text style={styles.importSubtitle}>
+            Yemek sitesi, TikTok, Instagram Reel veya YouTube Shorts linki yapıştır
+          </Text>
+          <TextInput
+            style={styles.importInput}
+            placeholder="https://..."
+            placeholderTextColor={colors.textMuted}
+            value={importUrl}
+            onChangeText={setImportUrl}
+            keyboardType="url"
+            autoFocus
+            autoCapitalize="none"
+          />
+          {importUrl.trim() && isVideoUrl(importUrl) && (
+            <View style={styles.importVideoHint}>
+              <MaterialIcons name="smart-display" size={16} color="#7C3AED" />
+              <Text style={styles.importVideoHintText}>
+                Video linki algılandı — AI ile tarif çıkarılacak
+              </Text>
+            </View>
+          )}
+          <View style={styles.importSourceRow}>
+            <Text style={styles.importSourceLabel}>Desteklenen:</Text>
+            <Text style={styles.importSourceChip}>🌐 Yemek siteleri</Text>
+            <Text style={styles.importSourceChip}>📱 TikTok</Text>
+            <Text style={styles.importSourceChip}>📷 Instagram</Text>
+            <Text style={styles.importSourceChip}>▶️ YouTube</Text>
+          </View>
+          <View style={styles.importActions}>
+            <TouchableOpacity style={styles.importCancelBtn} onPress={() => { setShowImport(false); setImportUrl(''); }}>
+              <Text style={styles.importCancelText}>İptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.importConfirmBtn, (importing || !importUrl.trim()) && { opacity: 0.5 }]}
+              onPress={handleImportUrl}
+              disabled={importing || !importUrl.trim()}
+            >
+              {importing ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ActivityIndicator size="small" color={colors.textInverse} />
+                  <Text style={styles.importConfirmText}>
+                    {isVideoUrl(importUrl) ? 'AI analiz ediyor...' : 'İçe aktarılıyor...'}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.importConfirmText}>İçe Aktar</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
     </>
   );
 }
@@ -768,6 +751,99 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
 
+  // Hero Card
+  heroCard: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.xl,
+    overflow: 'hidden',
+    height: 200,
+    ...(isWeb ? { maxWidth: 960, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
+  },
+  heroImage: {
+    width: '100%',
+    height: 200,
+    position: 'absolute',
+  },
+  heroImageFallback: {
+    backgroundColor: colors.primary + '20',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  heroGradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 140,
+  },
+  heroContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: spacing.md,
+  },
+  heroLabel: {
+    fontSize: fontSize.xs,
+    fontFamily: 'Jakarta-Bold',
+    color: 'rgba(255,255,255,0.8)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  heroTitle: {
+    fontSize: fontSize.xxl,
+    fontFamily: 'Jakarta-ExtraBold',
+    color: '#fff',
+    letterSpacing: -0.5,
+  },
+  heroMeta: {
+    fontSize: fontSize.sm,
+    fontFamily: 'Jakarta-SemiBold',
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 4,
+  },
+
+  // Category Pills
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  categoryPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  categoryPillEmoji: { fontSize: 14 },
+  categoryPillText: {
+    fontSize: fontSize.sm,
+    fontFamily: 'Jakarta-SemiBold',
+    color: colors.textSecondary,
+  },
+  categoryPillTextActive: {
+    color: colors.onPrimary,
+  },
+
+  // Clear filter
+  clearFilterBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: colors.primary + '15',
+    borderRadius: 16,
+  },
+  clearFilterText: {
+    color: colors.primary,
+    fontFamily: 'Jakarta-SemiBold',
+    fontSize: fontSize.xs,
+  },
+
   // Sections
   section: {
     marginTop: spacing.lg,
@@ -784,8 +860,8 @@ const styles = StyleSheet.create({
   // Circular categories (Talabat pattern)
   categoryScroll: {
     paddingHorizontal: spacing.md,
-    gap: spacing.md,
-    paddingBottom: spacing.xs,
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
   categoryCircle: {
     alignItems: 'center',
@@ -1055,7 +1131,11 @@ const styles = StyleSheet.create({
 
   // All Recipes Header
   allRecipesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
     ...(isWeb ? { maxWidth: 960, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
   },
 
@@ -1229,5 +1309,66 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+
+  // Import modal
+  importOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  importContent: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    padding: spacing.lg,
+    minHeight: 220,
+  },
+  importTitle: { fontSize: fontSize.xl, fontFamily: fonts.headingBold, color: colors.text },
+  importSubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2, marginBottom: spacing.md },
+  importInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.md,
+    color: colors.text,
+  },
+  importActions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  importCancelBtn: { flex: 1, padding: spacing.md, borderRadius: borderRadius.md, borderWidth: 1, borderColor: colors.border, alignItems: 'center' },
+  importCancelText: { color: colors.textSecondary, fontWeight: '600' },
+  importConfirmBtn: { flex: 1, padding: spacing.md, borderRadius: borderRadius.md, backgroundColor: colors.primary, alignItems: 'center' },
+  importConfirmText: { color: colors.textInverse, fontWeight: '700' },
+  importVideoHint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#7C3AED' + '14',
+    borderRadius: borderRadius.sm,
+    padding: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  importVideoHintText: {
+    fontSize: fontSize.xs,
+    color: '#7C3AED',
+    fontWeight: '600',
+    flex: 1,
+  },
+  importSourceRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  importSourceLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  importSourceChip: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    backgroundColor: colors.surfaceContainerLow,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: borderRadius.full,
   },
 });

@@ -11,9 +11,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   SectionList,
+  ScrollView,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
+import { MaterialIcons } from '@expo/vector-icons';
 import { useMealPlanStore } from '../src/stores/meal-plans';
+import { api } from '../src/api/client';
 import { colors, spacing, fontSize, borderRadius } from '../src/theme';
 import type { MealPlan, MealPlanItem } from '../src/types';
 
@@ -60,6 +64,16 @@ export default function MealPlansScreen() {
   const [showCreate, setShowCreate] = useState(false);
   const [planName, setPlanName] = useState('');
   const [planDays, setPlanDays] = useState('7');
+
+  // AI plan generation
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiDays, setAiDays] = useState('7');
+  const [aiServings, setAiServings] = useState('2');
+  const [aiCalories, setAiCalories] = useState('');
+  const [aiMeals, setAiMeals] = useState<string[]>(['BREAKFAST', 'LUNCH', 'DINNER']);
+  const [aiPreferences, setAiPreferences] = useState('');
+  const [aiUseInventory, setAiUseInventory] = useState(true);
 
   useEffect(() => {
     fetchPlans();
@@ -125,6 +139,42 @@ export default function MealPlansScreen() {
     }
   };
 
+  const handleAiGenerate = async () => {
+    setAiGenerating(true);
+    try {
+      const body: any = {
+        days: parseInt(aiDays) || 7,
+        servings: parseInt(aiServings) || 2,
+        mealTypes: aiMeals,
+        useInventory: aiUseInventory,
+      };
+      if (aiCalories) body.dailyCalorieTarget = parseInt(aiCalories);
+      if (aiPreferences.trim()) body.preferences = aiPreferences.trim();
+
+      const res = await api.post<any>('/meal-plans/ai-generate', body);
+      const plan = (res as any).plan;
+      setShowAiModal(false);
+      await fetchPlans();
+      if (plan?.id) {
+        await fetchPlan(plan.id);
+        setViewMode('detail');
+      }
+      const msg = `${(res as any).summary?.totalMeals || 0} öğünlük AI plan oluşturuldu!`;
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('AI Plan Hazır!', msg);
+    } catch (err: any) {
+      const msg = err.message || 'AI plan oluşturulamadı.';
+      Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Hata', msg);
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const toggleAiMeal = (meal: string) => {
+    setAiMeals((prev) =>
+      prev.includes(meal) ? prev.filter((m) => m !== meal) : [...prev, meal],
+    );
+  };
+
   const handleGenerateShoppingList = async () => {
     if (!currentPlan) return;
     try {
@@ -149,9 +199,126 @@ export default function MealPlansScreen() {
           <View style={{ width: 60 }} />
         </View>
 
-        <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreate(true)}>
-          <Text style={styles.createBtnText}>+ Yeni Plan</Text>
-        </TouchableOpacity>
+        <View style={styles.actionRow}>
+          <TouchableOpacity style={[styles.createBtn, { flex: 1 }]} onPress={() => setShowCreate(true)}>
+            <Text style={styles.createBtnText}>+ Yeni Plan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.aiBtn]} onPress={() => setShowAiModal(true)}>
+            <MaterialIcons name="auto-awesome" size={18} color={colors.textInverse} />
+            <Text style={styles.aiBtnText}>AI Plan</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* AI Plan Modal */}
+        <Modal visible={showAiModal} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.aiModal}>
+              <View style={styles.aiModalHeader}>
+                <MaterialIcons name="auto-awesome" size={22} color={colors.primary} />
+                <Text style={styles.aiModalTitle}>AI Haftalık Plan</Text>
+                <TouchableOpacity onPress={() => setShowAiModal(false)}>
+                  <MaterialIcons name="close" size={22} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 400 }}>
+                {/* Days */}
+                <Text style={styles.aiLabel}>Kaç gün?</Text>
+                <View style={styles.daysRow}>
+                  {['3', '5', '7', '14'].map((d) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.dayChip, aiDays === d && styles.dayChipActive]}
+                      onPress={() => setAiDays(d)}
+                    >
+                      <Text style={[styles.dayChipText, aiDays === d && styles.dayChipTextActive]}>{d}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Servings */}
+                <Text style={styles.aiLabel}>Kişi sayısı</Text>
+                <View style={styles.daysRow}>
+                  {['1', '2', '3', '4', '6'].map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      style={[styles.dayChip, aiServings === s && styles.dayChipActive]}
+                      onPress={() => setAiServings(s)}
+                    >
+                      <Text style={[styles.dayChipText, aiServings === s && styles.dayChipTextActive]}>{s}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Meal types */}
+                <Text style={styles.aiLabel}>Öğünler</Text>
+                <View style={styles.daysRow}>
+                  {(['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as const).map((m) => (
+                    <TouchableOpacity
+                      key={m}
+                      style={[styles.dayChip, aiMeals.includes(m) && styles.dayChipActive]}
+                      onPress={() => toggleAiMeal(m)}
+                    >
+                      <Text style={[styles.dayChipText, aiMeals.includes(m) && styles.dayChipTextActive]}>
+                        {MEAL_TYPE_ICONS[m]} {MEAL_TYPE_LABELS[m]?.slice(0, 6)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                {/* Calorie target */}
+                <Text style={styles.aiLabel}>Günlük kalori hedefi (isteğe bağlı)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="ör. 2000"
+                  placeholderTextColor={colors.textMuted}
+                  value={aiCalories}
+                  onChangeText={setAiCalories}
+                  keyboardType="numeric"
+                />
+
+                {/* Preferences */}
+                <Text style={styles.aiLabel}>Tercihler (isteğe bağlı)</Text>
+                <TextInput
+                  style={[styles.input, { minHeight: 60 }]}
+                  placeholder="ör. Akdeniz mutfağı, hafif tarifler..."
+                  placeholderTextColor={colors.textMuted}
+                  value={aiPreferences}
+                  onChangeText={setAiPreferences}
+                  multiline
+                />
+
+                {/* Use inventory toggle */}
+                <TouchableOpacity
+                  style={styles.aiToggleRow}
+                  onPress={() => setAiUseInventory(!aiUseInventory)}
+                >
+                  <MaterialIcons
+                    name={aiUseInventory ? 'check-box' : 'check-box-outline-blank'}
+                    size={22}
+                    color={aiUseInventory ? colors.primary : colors.textMuted}
+                  />
+                  <Text style={styles.aiToggleText}>Stoktaki malzemeleri öncelikle kullan</Text>
+                </TouchableOpacity>
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[styles.confirmBtn, { marginTop: spacing.md }, aiGenerating && { opacity: 0.5 }]}
+                onPress={handleAiGenerate}
+                disabled={aiGenerating}
+              >
+                {aiGenerating ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator color={colors.textInverse} size="small" />
+                    <Text style={styles.confirmBtnText}>AI plan oluşturuyor...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.confirmBtnText}>AI ile Plan Oluştur</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {showCreate && (
           <View style={styles.createForm}>
@@ -238,6 +405,7 @@ export default function MealPlansScreen() {
   }
 
   // ===== DETAIL VIEW =====
+  const [detailMode, setDetailMode] = useState<'grid' | 'list'>('grid');
   const byDate = currentPlan?.byDate || {};
   const sortedDates = Object.keys(byDate).sort();
 
@@ -252,6 +420,131 @@ export default function MealPlansScreen() {
   const cookedTotal = currentPlan?.items?.filter((i) => i.isCooked).length || 0;
   const totalItems = currentPlan?.items?.length || 0;
 
+  const MEAL_ORDER = ['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'] as const;
+  const DAY_LABELS_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+
+  const renderGridView = () => (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />}
+    >
+      {/* Column headers (days) */}
+      <View style={styles.gridHeaderRow}>
+        <View style={styles.gridMealLabel} />
+        {sortedDates.map((date) => {
+          const d = new Date(date);
+          const dayIdx = (d.getDay() + 6) % 7; // Monday = 0
+          const isToday = new Date().toISOString().split('T')[0] === date;
+          return (
+            <View key={date} style={[styles.gridDayHeader, isToday && styles.gridDayHeaderToday]}>
+              <Text style={[styles.gridDayName, isToday && { color: colors.primary }]}>{DAY_LABELS_SHORT[dayIdx]}</Text>
+              <Text style={[styles.gridDayNum, isToday && { color: colors.primary }]}>{d.getDate()}</Text>
+            </View>
+          );
+        })}
+      </View>
+
+      {/* Rows (meal types) */}
+      {MEAL_ORDER.map((meal) => (
+        <View key={meal} style={styles.gridRow}>
+          <View style={styles.gridMealLabel}>
+            <Text style={styles.gridMealEmoji}>{MEAL_TYPE_ICONS[meal]}</Text>
+            <Text style={styles.gridMealText}>{MEAL_TYPE_LABELS[meal]?.substring(0, 6)}</Text>
+          </View>
+          {sortedDates.map((date) => {
+            const items = (byDate[date] || []).filter((i) => i.mealType === meal);
+            return (
+              <View key={date} style={styles.gridCell}>
+                {items.length > 0 ? items.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.gridCellCard, item.isCooked && styles.gridCellCardCooked]}
+                    onPress={() => { if (item.recipeId) router.push(`/recipe/${item.recipeId}`); }}
+                    onLongPress={() => handleToggle(item)}
+                  >
+                    <Text style={styles.gridCellTitle} numberOfLines={2}>
+                      {item.recipe?.title || 'Tarif'}
+                    </Text>
+                    {item.isCooked && (
+                      <MaterialIcons name="check-circle" size={12} color={colors.success} style={{ marginTop: 2 }} />
+                    )}
+                  </TouchableOpacity>
+                )) : (
+                  <View style={styles.gridCellEmpty}>
+                    <Text style={{ color: colors.textMuted, fontSize: 16 }}>·</Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </ScrollView>
+  );
+
+  const renderListView = () => (
+    <SectionList
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />}
+      stickySectionHeadersEnabled={false}
+      contentContainerStyle={{ paddingBottom: 40 }}
+      ListEmptyComponent={
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🍽️</Text>
+          <Text style={styles.emptyTitle}>Plana henüz tarif eklenmemiş</Text>
+          <Text style={styles.emptySubtitle}>Tarifler ekranından bir tarife git ve plana ekle</Text>
+        </View>
+      }
+      renderSectionHeader={({ section }) => (
+        <View style={styles.dateHeader}>
+          <Text style={styles.dateHeaderText}>{formatDate(section.title)}</Text>
+        </View>
+      )}
+      renderItem={({ item }) => (
+        <View style={[styles.mealItem, item.isCooked && styles.mealItemCooked]}>
+          <TouchableOpacity style={styles.cookCheckbox} onPress={() => handleToggle(item)}>
+            <Text style={{ fontSize: 20 }}>{item.isCooked ? '✅' : '⬜'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.mealInfo}
+            onPress={() => {
+              if (item.recipeId) router.push(`/recipe/${item.recipeId}`);
+            }}
+          >
+            <View style={styles.mealTypeRow}>
+              <Text style={styles.mealTypeIcon}>{MEAL_TYPE_ICONS[item.mealType] || '🍽️'}</Text>
+              <Text style={styles.mealTypeLabel}>{MEAL_TYPE_LABELS[item.mealType] || item.mealType}</Text>
+            </View>
+            <Text style={[styles.mealTitle, item.isCooked && styles.mealTitleCooked]} numberOfLines={1}>
+              {item.recipe?.title || 'Tarif'}
+            </Text>
+            <View style={styles.mealMeta}>
+              {item.recipe?.totalTimeMinutes ? (
+                <Text style={styles.mealMetaText}>⏱ {item.recipe.totalTimeMinutes} dk</Text>
+              ) : null}
+              {item.recipe?.difficulty ? (
+                <Text style={styles.mealMetaText}>
+                  {item.recipe.difficulty === 'Kolay' ? '🟢' : item.recipe.difficulty === 'Orta' ? '🟡' : '🔴'} {item.recipe.difficulty}
+                </Text>
+              ) : null}
+              {item.servings > 1 && (
+                <Text style={styles.mealMetaText}>👥 {item.servings} kişilik</Text>
+              )}
+              {item.recipe?.totalCalories ? (
+                <Text style={styles.mealMetaText}>🔥 {Math.round(item.recipe.totalCalories)} kcal</Text>
+              ) : null}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => handleRemoveItem(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Text style={{ fontSize: 14, color: colors.error }}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    />
+  );
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -265,78 +558,41 @@ export default function MealPlansScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Stats bar */}
-      {totalItems > 0 && (
-        <View style={styles.statsBar}>
-          <Text style={styles.statsText}>
-            {cookedTotal}/{totalItems} pişirildi
-          </Text>
-          <View style={styles.progressBarWide}>
-            <View style={[styles.progressFill, { width: `${(cookedTotal / totalItems) * 100}%` }]} />
-          </View>
+      {/* Stats bar + view toggle */}
+      <View style={styles.statsBar}>
+        {totalItems > 0 && (
+          <>
+            <Text style={styles.statsText}>
+              {cookedTotal}/{totalItems} pişirildi
+            </Text>
+            <View style={styles.progressBarWide}>
+              <View style={[styles.progressFill, { width: `${(cookedTotal / totalItems) * 100}%` }]} />
+            </View>
+          </>
+        )}
+        <View style={styles.viewToggle}>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, detailMode === 'grid' && styles.viewToggleBtnActive]}
+            onPress={() => setDetailMode('grid')}
+          >
+            <MaterialIcons name="grid-view" size={18} color={detailMode === 'grid' ? colors.primary : colors.textMuted} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.viewToggleBtn, detailMode === 'list' && styles.viewToggleBtnActive]}
+            onPress={() => setDetailMode('list')}
+          >
+            <MaterialIcons name="view-list" size={18} color={detailMode === 'list' ? colors.primary : colors.textMuted} />
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
 
-      {/* Day sections */}
-      <SectionList
-        sections={sections}
-        keyExtractor={(item) => item.id}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />}
-        stickySectionHeadersEnabled={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🍽️</Text>
-            <Text style={styles.emptyTitle}>Plana henüz tarif eklenmemiş</Text>
-            <Text style={styles.emptySubtitle}>Tarifler ekranından bir tarife git ve plana ekle</Text>
-          </View>
-        }
-        renderSectionHeader={({ section }) => (
-          <View style={styles.dateHeader}>
-            <Text style={styles.dateHeaderText}>{formatDate(section.title)}</Text>
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <View style={[styles.mealItem, item.isCooked && styles.mealItemCooked]}>
-            <TouchableOpacity style={styles.cookCheckbox} onPress={() => handleToggle(item)}>
-              <Text style={{ fontSize: 20 }}>{item.isCooked ? '✅' : '⬜'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.mealInfo}
-              onPress={() => {
-                if (item.recipeId) router.push(`/recipe/${item.recipeId}`);
-              }}
-            >
-              <View style={styles.mealTypeRow}>
-                <Text style={styles.mealTypeIcon}>{MEAL_TYPE_ICONS[item.mealType] || '🍽️'}</Text>
-                <Text style={styles.mealTypeLabel}>{MEAL_TYPE_LABELS[item.mealType] || item.mealType}</Text>
-              </View>
-              <Text style={[styles.mealTitle, item.isCooked && styles.mealTitleCooked]} numberOfLines={1}>
-                {item.recipe?.title || 'Tarif'}
-              </Text>
-              <View style={styles.mealMeta}>
-                {item.recipe?.totalTimeMinutes ? (
-                  <Text style={styles.mealMetaText}>⏱ {item.recipe.totalTimeMinutes} dk</Text>
-                ) : null}
-                {item.recipe?.difficulty ? (
-                  <Text style={styles.mealMetaText}>
-                    {item.recipe.difficulty === 'Kolay' ? '🟢' : item.recipe.difficulty === 'Orta' ? '🟡' : '🔴'} {item.recipe.difficulty}
-                  </Text>
-                ) : null}
-                {item.servings > 1 && (
-                  <Text style={styles.mealMetaText}>👥 {item.servings} kişilik</Text>
-                )}
-                {item.recipe?.totalCalories ? (
-                  <Text style={styles.mealMetaText}>🔥 {Math.round(item.recipe.totalCalories)} kcal</Text>
-                ) : null}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleRemoveItem(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Text style={{ fontSize: 14, color: colors.error }}>✕</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      />
+      {sortedDates.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyIcon}>🍽️</Text>
+          <Text style={styles.emptyTitle}>Plana henüz tarif eklenmemiş</Text>
+          <Text style={styles.emptySubtitle}>Tarifler ekranından bir tarife git ve plana ekle</Text>
+        </View>
+      ) : detailMode === 'grid' ? renderGridView() : renderListView()}
     </View>
   );
 }
@@ -356,15 +612,79 @@ const styles = StyleSheet.create({
   backBtn: { color: colors.primary, fontWeight: '600', fontSize: fontSize.md },
   headerTitle: { flex: 1, textAlign: 'center', fontWeight: '700', fontSize: fontSize.lg, color: colors.text },
 
-  // Create button
+  // Action row
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
   createBtn: {
     backgroundColor: colors.primary,
-    margin: spacing.md,
     padding: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
   },
   createBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
+  aiBtn: {
+    backgroundColor: '#7C3AED',
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: spacing.lg,
+  },
+  aiBtnText: { color: colors.textInverse, fontWeight: '700', fontSize: fontSize.md },
+
+  // AI Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  aiModal: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: spacing.lg,
+    maxHeight: '80%',
+  },
+  aiModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  aiModalTitle: {
+    flex: 1,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  aiLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    marginBottom: 4,
+  },
+  aiToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  aiToggleText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    flex: 1,
+  },
 
   // Create form
   createForm: {
@@ -494,4 +814,102 @@ const styles = StyleSheet.create({
   mealTitleCooked: { textDecorationLine: 'line-through', color: colors.textMuted },
   mealMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
   mealMetaText: { fontSize: fontSize.xs, color: colors.textSecondary },
+
+  // Grid view
+  gridHeaderRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.xs,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+  },
+  gridMealLabel: {
+    width: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridDayHeader: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  gridDayHeaderToday: {
+    backgroundColor: colors.primary + '18',
+  },
+  gridDayName: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  gridDayNum: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    color: colors.text,
+  },
+  gridRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.xs,
+    minHeight: 64,
+    marginBottom: 2,
+  },
+  gridMealEmoji: {
+    fontSize: 16,
+  },
+  gridMealText: {
+    fontSize: 9,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  gridCell: {
+    flex: 1,
+    padding: 2,
+    minHeight: 56,
+  },
+  gridCellCard: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.sm,
+    padding: 4,
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridCellCardCooked: {
+    backgroundColor: colors.success + '14',
+    borderColor: colors.success + '40',
+  },
+  gridCellTitle: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  gridCellEmpty: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderStyle: 'dashed',
+  },
+
+  // View toggle
+  viewToggle: {
+    flexDirection: 'row',
+    marginLeft: spacing.sm,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    overflow: 'hidden',
+  },
+  viewToggleBtn: {
+    padding: 6,
+    backgroundColor: colors.background,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: colors.primary + '18',
+  },
 });
