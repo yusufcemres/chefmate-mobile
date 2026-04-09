@@ -90,6 +90,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Keşfet',
+          tabBarAccessibilityLabel: 'Tarifleri keşfet',
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? {
               backgroundColor: c.primaryContainer,
@@ -107,6 +108,7 @@ export default function TabLayout() {
         name="kitchen"
         options={{
           title: 'Mutfağım',
+          tabBarAccessibilityLabel: 'Mutfak stoku, plan ve alışveriş listesi',
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? {
               backgroundColor: c.primaryContainer,
@@ -124,6 +126,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Ben',
+          tabBarAccessibilityLabel: 'Profilim ve ayarlar',
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? {
               backgroundColor: c.primaryContainer,

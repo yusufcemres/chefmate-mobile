@@ -213,7 +213,7 @@ export default function CookingModeScreen() {
     <View style={styles.container}>
       {/* ===== Top Bar ===== */}
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()} accessibilityLabel="Pişirme modundan çık" accessibilityRole="button">
           <MaterialIcons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
@@ -225,6 +225,9 @@ export default function CookingModeScreen() {
         <TouchableOpacity
           style={[styles.voiceToggle, voiceEnabled && styles.voiceToggleActive]}
           onPress={toggleVoice}
+          accessibilityLabel={voiceEnabled ? 'Sesli okumayı kapat' : 'Sesli okumayı aç'}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: voiceEnabled }}
         >
           <MaterialIcons
             name={voiceEnabled ? 'volume-up' : 'volume-off'}

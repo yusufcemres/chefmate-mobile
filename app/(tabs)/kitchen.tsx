@@ -227,6 +227,10 @@ export default function KitchenScreen() {
           keyExtractor={i => i.id}
           contentContainerStyle={s.listContent}
           refreshControl={<RefreshControl refreshing={invLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
+          windowSize={5}
+          maxToRenderPerBatch={15}
+          removeClippedSubviews={Platform.OS !== 'web'}
+          initialNumToRender={10}
           ListHeaderComponent={
             <>
               {/* Expiry alert card */}

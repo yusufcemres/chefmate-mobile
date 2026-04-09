@@ -590,6 +590,10 @@ export default function HomeScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       onEndReached={loadMoreRecipes}
       onEndReachedThreshold={0.4}
+      windowSize={7}
+      maxToRenderPerBatch={10}
+      removeClippedSubviews={Platform.OS !== 'web'}
+      initialNumToRender={6}
       ListFooterComponent={
         <>
           {loadingMore && (

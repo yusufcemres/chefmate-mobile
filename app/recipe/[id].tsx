@@ -309,8 +309,8 @@ export default function RecipeDetailScreen() {
         </View>
 
         {/* ===== Compact Action Bar ===== */}
-        <View style={styles.actionBar}>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => toggleFavorite(recipe.id)}>
+        <View style={styles.actionBar} accessibilityRole="toolbar">
+          <TouchableOpacity style={styles.actionBtn} onPress={() => toggleFavorite(recipe.id)} accessibilityLabel={isFavorite(recipe.id) ? 'Favorilerden çıkar' : 'Favorilere ekle'} accessibilityRole="button">
             <MaterialIcons
               name={isFavorite(recipe.id) ? 'favorite' : 'favorite-border'}
               size={22}
@@ -318,15 +318,15 @@ export default function RecipeDetailScreen() {
             />
             <Text style={styles.actionLabel}>Favori</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlanPicker(true)}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPlanPicker(true)} accessibilityLabel="Yemek planına ekle" accessibilityRole="button">
             <MaterialIcons name="calendar-today" size={22} color={colors.textSecondary} />
             <Text style={styles.actionLabel}>Plana Ekle</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={handleAddToShoppingList}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleAddToShoppingList} accessibilityLabel="Alışveriş listesine ekle" accessibilityRole="button">
             <MaterialIcons name="shopping-cart" size={22} color={colors.textSecondary} />
             <Text style={styles.actionLabel}>Listeye</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={handleShare}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleShare} accessibilityLabel="Tarifi paylaş" accessibilityRole="button">
             <MaterialIcons name="share" size={22} color={colors.textSecondary} />
             <Text style={styles.actionLabel}>Paylaş</Text>
           </TouchableOpacity>
