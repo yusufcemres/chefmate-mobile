@@ -26,6 +26,11 @@ export default function Root({ children }: PropsWithChildren) {
           #root { flex: 1; display: flex; }
           @media print {
             .no-print { display: none !important; }
+            /* Hide navigation elements when printing */
+            [role="tabbar"], [data-testid="tab-bar"] { display: none !important; }
+            /* Clean up for print */
+            body { background: #fff !important; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         ` }} />
       </head>

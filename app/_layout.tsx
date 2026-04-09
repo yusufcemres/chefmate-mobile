@@ -17,7 +17,9 @@ import {
 } from '@expo-google-fonts/manrope';
 import { useAuthStore } from '../src/stores/auth';
 import { colors } from '../src/theme';
-import { ThemeProvider } from '../src/theme/ThemeContext';
+import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
+import { useOfflineCacheStore } from '../src/stores/offline-cache';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -37,6 +39,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     init();
+    useOfflineCacheStore.getState().loadCache();
     // Timeout: if fonts don't load within 3s, proceed anyway
     const timer = setTimeout(() => setTimedOut(true), 3000);
     return () => clearTimeout(timer);
@@ -59,15 +62,26 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider>
-    <View style={{ flex: 1 }} onLayout={onLayoutReady}>
-      <StatusBar style="dark" />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ThemedApp fontsLoaded={fontsLoaded} onLayoutReady={onLayoutReady} />
+      </ThemeProvider>
+    </ErrorBoundary>
+  );
+}
+
+function ThemedApp({ fontsLoaded, onLayoutReady }: { fontsLoaded: boolean; onLayoutReady: () => void }) {
+  const { isDark, colors: c } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: c.background }} onLayout={onLayoutReady}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: colors.surface },
-          headerTintColor: colors.text,
+          headerStyle: { backgroundColor: c.surface },
+          headerTintColor: c.text,
           headerTitleStyle: { fontFamily: fontsLoaded ? 'Jakarta-Bold' : undefined },
-          contentStyle: { backgroundColor: colors.background },
+          contentStyle: { backgroundColor: c.background },
         }}
       >
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -78,12 +92,15 @@ export default function RootLayout() {
           options={{ title: 'Tarif Detayı', headerShown: false }}
         />
         <Stack.Screen
+          name="collection/[slug]"
+          options={{ title: 'Koleksiyon', headerShown: false }}
+        />
+        <Stack.Screen
           name="cooking/[id]"
           options={{ title: 'Pişirme Modu', headerBackTitle: 'Geri', presentation: 'fullScreenModal' }}
         />
       </Stack>
     </View>
-    </ThemeProvider>
   );
 }
 

@@ -16,7 +16,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
 import { useInventoryStore } from '../../src/stores/inventory';
 import { api } from '../../src/api/client';
-import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { EmptyState } from '../../src/components/EmptyState';
 import type { InventoryItem, Product, Category } from '../../src/types';
 
 // Category emoji mapping for inventory items
@@ -158,28 +159,59 @@ export default function InventoryScreen() {
     );
   };
 
+  const activeItems = items.filter((i) => i.status === 'ACTIVE');
+  const expiringCount = activeItems.filter((i) => {
+    const days = daysUntilExpiry(i.expirationDate);
+    return days !== null && days >= 0 && days <= 3;
+  }).length;
+  const expiredCount = activeItems.filter((i) => {
+    const days = daysUntilExpiry(i.expirationDate);
+    return days !== null && days < 0;
+  }).length;
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={items.filter((i) => i.status === 'ACTIVE')}
+        data={activeItems}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
-          <Text style={styles.count}>
-            {items.filter((i) => i.status === 'ACTIVE').length} ürün stoğunuzda
-          </Text>
+          <>
+            {(expiringCount > 0 || expiredCount > 0) && (
+              <View style={styles.expiryAlert}>
+                <MaterialIcons name="notifications-active" size={20} color={expiredCount > 0 ? colors.error : colors.warning} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  {expiredCount > 0 && (
+                    <Text style={[styles.expiryAlertText, { color: colors.error }]}>
+                      {expiredCount} ürünün tarihi geçti!
+                    </Text>
+                  )}
+                  {expiringCount > 0 && (
+                    <Text style={[styles.expiryAlertText, { color: colors.warning }]}>
+                      {expiringCount} ürün 3 gün içinde sona erecek
+                    </Text>
+                  )}
+                </View>
+              </View>
+            )}
+            <Text style={styles.count}>
+              {activeItems.length} ürün stoğunuzda
+            </Text>
+          </>
         }
         ListEmptyComponent={
           loading ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} />
           ) : (
-            <View style={styles.empty}>
-              <Text style={{ fontSize: 48 }}>🧊</Text>
-              <Text style={styles.emptyTitle}>Stoğunuz boş</Text>
-              <Text style={styles.emptyText}>Malzeme ekleyerek başlayın</Text>
-            </View>
+            <EmptyState
+              icon="kitchen"
+              title="Mutfağını Doldur!"
+              message="Stok ekleyerek başla. Malzemelerine göre tarif önerisi alabilirsin."
+              ctaLabel="Ürün Ekle"
+              onCta={() => setShowAdd(true)}
+            />
           )
         }
       />
@@ -262,7 +294,21 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
     ...(Platform.OS === 'web' ? { maxWidth: 900, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
   },
-  count: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.sm, fontWeight: '600' },
+  count: { fontSize: fontSize.sm, color: colors.textMuted, marginBottom: spacing.sm, fontFamily: fonts.bodySemiBold },
+  expiryAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.warning + '14',
+    borderWidth: 1,
+    borderColor: colors.warning + '30',
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  expiryAlertText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.bodySemiBold,
+  },
   itemCard: {
     backgroundColor: colors.surfaceContainerLowest,
     borderRadius: borderRadius.lg,
@@ -280,8 +326,8 @@ const styles = StyleSheet.create({
   },
   itemEmoji: { fontSize: 28 },
   itemLeft: { flex: 1 },
-  itemName: { fontSize: fontSize.md, fontWeight: '700', color: colors.text },
-  itemDetail: { fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 },
+  itemName: { fontSize: fontSize.md, fontFamily: fonts.headingBold, color: colors.text },
+  itemDetail: { fontSize: fontSize.xs, fontFamily: fonts.bodyRegular, color: colors.textSecondary, marginTop: 2 },
   expiryBarContainer: {
     height: 4,
     backgroundColor: colors.surfaceContainerHigh,
@@ -302,14 +348,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: borderRadius.full,
   },
-  expiryText: { fontSize: fontSize.xs, fontWeight: '700' },
+  expiryText: { fontSize: fontSize.xs, fontFamily: fonts.headingBold },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyTitle: { fontSize: fontSize.xl, fontWeight: '700', color: colors.text, marginTop: spacing.sm },
   emptyText: { fontSize: fontSize.md, color: colors.textSecondary },
   fab: { position: 'absolute', bottom: 90, right: 20, width: 56, height: 56, borderRadius: 28, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: colors.surface, borderTopLeftRadius: borderRadius.xl, borderTopRightRadius: borderRadius.xl, padding: spacing.lg, minHeight: 300 },
-  modalTitle: { fontSize: fontSize.xl, fontWeight: '700', marginBottom: spacing.md },
+  modalTitle: { fontSize: fontSize.xl, fontFamily: fonts.headingBold, color: colors.text, marginBottom: spacing.md },
   input: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.md, color: colors.text, marginBottom: spacing.sm },
   searchList: { maxHeight: 200, marginBottom: spacing.sm },
   searchItem: { paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight },

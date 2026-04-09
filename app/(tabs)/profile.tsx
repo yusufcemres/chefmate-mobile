@@ -16,12 +16,37 @@ import { useAuthStore } from '../../src/stores/auth';
 import { useFavoritesStore } from '../../src/stores/favorites';
 import { api } from '../../src/api/client';
 import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
+import BadgeDisplay from '../../src/components/BadgeDisplay';
+
+type ThemeMode = 'light' | 'dark' | 'system';
 
 const isWeb = Platform.OS === 'web';
 
 const allergenOptions = [
   'Gluten', 'Süt', 'Yumurta', 'Balık', 'Kabuklu Deniz Ürünü',
   'Fıstık', 'Soya', 'Kereviz', 'Hardal', 'Susam',
+];
+
+const cuisineOptions = [
+  { slug: 'turk-mutfagi', label: 'Türk Mutfağı', emoji: '🇹🇷' },
+  { slug: 'italyan', label: 'İtalyan', emoji: '🇮🇹' },
+  { slug: 'asya', label: 'Asya', emoji: '🥢' },
+  { slug: 'meksika', label: 'Meksika', emoji: '🌮' },
+  { slug: 'akdeniz', label: 'Akdeniz', emoji: '🫒' },
+  { slug: 'hint', label: 'Hint', emoji: '🍛' },
+  { slug: 'japon', label: 'Japon', emoji: '🍣' },
+  { slug: 'fransiz', label: 'Fransız', emoji: '🥐' },
+  { slug: 'ortadogu', label: 'Ortadoğu', emoji: '🧆' },
+  { slug: 'amerikan', label: 'Amerikan', emoji: '🍔' },
+  { slug: 'cin', label: 'Çin', emoji: '🥟' },
+  { slug: 'kore', label: 'Kore', emoji: '🍜' },
+];
+
+const skillLevels = [
+  { key: 'BEGINNER', label: 'Başlangıç', emoji: '🌱' },
+  { key: 'INTERMEDIATE', label: 'Orta', emoji: '👨‍🍳' },
+  { key: 'ADVANCED', label: 'İleri', emoji: '⭐' },
 ];
 
 const dietOptions = [
@@ -38,9 +63,19 @@ interface ProfileStats {
   mealPlanCount: number;
 }
 
+interface WasteStats {
+  wasteScore: number;
+  totalConsumed: number;
+  totalWaste: number;
+  consumptionRate: number;
+  expiringItemsCount: number;
+  weeklyBreakdown: Array<{ week: string; consumed: number; wasted: number }>;
+}
+
 export default function ProfileScreen() {
   const { user, preferences, logout, updatePreferences } = useAuthStore();
   const { ids: favoriteIds, loaded: favsLoaded, fetch: fetchFavs } = useFavoritesStore();
+  const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>(preferences?.allergens || []);
   const [selectedDiets, setSelectedDiets] = useState<Record<string, boolean>>(
     preferences?.dietaryProfile || {},
@@ -49,6 +84,10 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<'prefs' | 'stats'>('stats');
   const [stats, setStats] = useState<ProfileStats>({ totalFavorites: 0, inventoryCount: 0, mealPlanCount: 0 });
+  const [selectedCuisines, setSelectedCuisines] = useState<string[]>(preferences?.cuisinePreferences || []);
+  const [selectedSkill, setSelectedSkill] = useState<string>(preferences?.cookingSkillLevel || 'INTERMEDIATE');
+  const [tasteProfile, setTasteProfile] = useState<any>(null);
+  const [wasteStats, setWasteStats] = useState<WasteStats | null>(null);
 
   useEffect(() => {
     if (!favsLoaded) fetchFavs();
@@ -61,6 +100,18 @@ export default function ProfileScreen() {
       const planCount = Array.isArray(plans) ? plans.length : 0;
       setStats({ totalFavorites: favoriteIds.length, inventoryCount: invItems, mealPlanCount: planCount });
     });
+
+    if (user) {
+      // Fetch taste profile
+      api.get<any>(`/users/${user.id}/taste-profile`).then((res) => {
+        setTasteProfile(res);
+      }).catch(() => {});
+
+      // Fetch waste stats
+      api.get<any>(`/users/${user.id}/inventory/waste-stats?days=30`).then((res) => {
+        setWasteStats(res as any);
+      }).catch(() => {});
+    }
   }, [favsLoaded]);
 
   useEffect(() => {
@@ -73,6 +124,12 @@ export default function ProfileScreen() {
     );
   };
 
+  const toggleCuisine = (slug: string) => {
+    setSelectedCuisines((prev) =>
+      prev.includes(slug) ? prev.filter((x) => x !== slug) : [...prev, slug],
+    );
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -81,6 +138,13 @@ export default function ProfileScreen() {
         dietaryProfile: selectedDiets,
         servingSize: parseInt(servingSize) || 1,
       });
+      // Also save cuisine preferences + rebuild taste profile
+      if (user) {
+        await api.post(`/users/${user.id}/taste-profile/preferences`, {
+          cuisines: selectedCuisines,
+          skillLevel: selectedSkill,
+        });
+      }
       if (isWeb) window.alert('Tercihleriniz güncellendi.');
       else Alert.alert('Kaydedildi', 'Tercihleriniz güncellendi.');
     } catch (err: any) {
@@ -147,6 +211,67 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* ===== Waste Score Dashboard ===== */}
+      {wasteStats && (
+        <View style={styles.wasteSection}>
+          <View style={styles.sectionHeader}>
+            <MaterialIcons name="eco" size={18} color={colors.success} />
+            <Text style={styles.sectionTitle}>İsraf Skoru</Text>
+          </View>
+          <View style={styles.wasteScoreRow}>
+            <View style={[
+              styles.wasteScoreCircle,
+              { borderColor: wasteStats.wasteScore >= 80 ? colors.success : wasteStats.wasteScore >= 50 ? colors.warning : colors.error },
+            ]}>
+              <Text style={[
+                styles.wasteScoreValue,
+                { color: wasteStats.wasteScore >= 80 ? colors.success : wasteStats.wasteScore >= 50 ? colors.warning : colors.error },
+              ]}>{wasteStats.wasteScore}</Text>
+              <Text style={styles.wasteScoreLabel}>/ 100</Text>
+            </View>
+            <View style={styles.wasteMetrics}>
+              <View style={styles.wasteMetricRow}>
+                <Text style={styles.wasteMetricIcon}>✅</Text>
+                <Text style={styles.wasteMetricText}>Tüketilen: {wasteStats.totalConsumed}g</Text>
+              </View>
+              <View style={styles.wasteMetricRow}>
+                <Text style={styles.wasteMetricIcon}>🗑️</Text>
+                <Text style={styles.wasteMetricText}>İsraf: {wasteStats.totalWaste}g</Text>
+              </View>
+              <View style={styles.wasteMetricRow}>
+                <Text style={styles.wasteMetricIcon}>⏰</Text>
+                <Text style={styles.wasteMetricText}>{wasteStats.expiringItemsCount} ürün sona eriyor</Text>
+              </View>
+              <View style={styles.wasteMetricRow}>
+                <Text style={styles.wasteMetricIcon}>📊</Text>
+                <Text style={styles.wasteMetricText}>Kullanım oranı: %{wasteStats.consumptionRate}</Text>
+              </View>
+            </View>
+          </View>
+          {/* Simple weekly bar chart */}
+          {wasteStats.weeklyBreakdown.length > 0 && (
+            <View style={styles.weeklyChart}>
+              {wasteStats.weeklyBreakdown.slice(-4).map((w) => {
+                const total = w.consumed + w.wasted;
+                const consumedPct = total > 0 ? (w.consumed / total) * 100 : 100;
+                return (
+                  <View key={w.week} style={styles.weeklyBar}>
+                    <View style={styles.weeklyBarStack}>
+                      <View style={[styles.weeklyBarFill, { height: `${consumedPct}%`, backgroundColor: colors.success }]} />
+                      <View style={[styles.weeklyBarFill, { height: `${100 - consumedPct}%`, backgroundColor: colors.error + '60' }]} />
+                    </View>
+                    <Text style={styles.weeklyBarLabel}>{w.week.slice(5)}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* ===== Badges ===== */}
+      <BadgeDisplay />
+
       {/* ===== Quick Nav Cards ===== */}
       <View style={styles.navGrid}>
         <TouchableOpacity style={styles.navCard} onPress={() => router.push('/households')}>
@@ -181,6 +306,37 @@ export default function ProfileScreen() {
 
       {activeTab === 'stats' && (
         <>
+          {/* Theme Mode */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="dark-mode" size={18} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Görünüm</Text>
+            </View>
+            <View style={styles.themeModes}>
+              {([
+                { key: 'light' as ThemeMode, label: 'Açık', icon: 'light-mode' as const },
+                { key: 'dark' as ThemeMode, label: 'Koyu', icon: 'dark-mode' as const },
+                { key: 'system' as ThemeMode, label: 'Sistem', icon: 'settings-brightness' as const },
+              ]).map((t) => (
+                <TouchableOpacity
+                  key={t.key}
+                  style={[styles.themeBtn, themeMode === t.key && styles.themeBtnActive]}
+                  onPress={() => setThemeMode(t.key)}
+                >
+                  <MaterialIcons
+                    name={t.icon}
+                    size={20}
+                    color={themeMode === t.key ? colors.onPrimary : colors.textSecondary}
+                  />
+                  <Text style={[
+                    styles.themeBtnText,
+                    themeMode === t.key && styles.themeBtnTextActive,
+                  ]}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           {/* Serving Size */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -210,6 +366,80 @@ export default function ProfileScreen() {
               <Text style={styles.servingLabel}>kişilik</Text>
             </View>
           </View>
+
+          {/* Cooking Skill Level */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="school" size={18} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Pişirme Seviyesi</Text>
+            </View>
+            <View style={styles.skillRow}>
+              {skillLevels.map((s) => (
+                <TouchableOpacity
+                  key={s.key}
+                  style={[styles.skillBtn, selectedSkill === s.key && styles.skillBtnActive]}
+                  onPress={() => setSelectedSkill(s.key)}
+                >
+                  <Text style={styles.skillEmoji}>{s.emoji}</Text>
+                  <Text style={[styles.skillLabel, selectedSkill === s.key && styles.skillLabelActive]}>{s.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Cuisine Preferences */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialIcons name="restaurant" size={18} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Mutfak Tercihleri</Text>
+            </View>
+            <Text style={styles.sectionSubtitle}>Sevdiğin mutfakları seç, öneriler kişiselleşsin</Text>
+            <View style={styles.cuisineGrid}>
+              {cuisineOptions.map((c) => (
+                <TouchableOpacity
+                  key={c.slug}
+                  style={[styles.cuisineChip, selectedCuisines.includes(c.slug) && styles.cuisineChipActive]}
+                  onPress={() => toggleCuisine(c.slug)}
+                >
+                  <Text style={styles.cuisineEmoji}>{c.emoji}</Text>
+                  <Text style={[styles.cuisineLabel, selectedCuisines.includes(c.slug) && styles.cuisineLabelActive]}>{c.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Taste Profile Summary */}
+          {tasteProfile && Object.keys(tasteProfile.tagScores || {}).length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="auto-awesome" size={18} color={colors.secondary} />
+                <Text style={styles.sectionTitle}>Lezzet Profilin</Text>
+              </View>
+              <Text style={styles.sectionSubtitle}>Aktivitelerine göre otomatik oluşturuldu</Text>
+              <View style={styles.tasteTagsWrap}>
+                {Object.entries(tasteProfile.tagScores as Record<string, number>)
+                  .sort((a, b) => (b[1] as number) - (a[1] as number))
+                  .slice(0, 10)
+                  .map(([tag, score]) => (
+                    <View key={tag} style={styles.tasteTag}>
+                      <Text style={styles.tasteTagText}>{tag}</Text>
+                      <View style={[styles.tasteTagBar, { width: Math.min(40, (score as number) * 3) }]} />
+                    </View>
+                  ))
+                }
+              </View>
+              {tasteProfile.difficultyPreference && (
+                <Text style={styles.tasteInsight}>
+                  Tercih ettiğin zorluk: <Text style={{ fontWeight: '700' }}>{tasteProfile.difficultyPreference}</Text>
+                </Text>
+              )}
+              {tasteProfile.avgTimePreference && (
+                <Text style={styles.tasteInsight}>
+                  Ortalama pişirme süresi: <Text style={{ fontWeight: '700' }}>{tasteProfile.avgTimePreference} dk</Text>
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Save */}
           <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
@@ -528,4 +758,199 @@ const styles = StyleSheet.create({
   logoutText: { color: colors.error, fontFamily: fonts.headingBold, fontSize: fontSize.md },
 
   disabled: { opacity: 0.5 },
+
+  // Theme mode selector
+  themeModes: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  themeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  themeBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  themeBtnText: {
+    fontSize: fontSize.sm,
+    fontFamily: fonts.headingSemiBold,
+    color: colors.textSecondary,
+  },
+  themeBtnTextActive: {
+    color: colors.onPrimary,
+  },
+
+  // Waste dashboard
+  wasteSection: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+  },
+  wasteScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+  wasteScoreCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wasteScoreValue: {
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  wasteScoreLabel: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+  },
+  wasteMetrics: {
+    flex: 1,
+    gap: 4,
+  },
+  wasteMetricRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  wasteMetricIcon: { fontSize: 14 },
+  wasteMetricText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+  },
+  weeklyChart: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    height: 60,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  weeklyBar: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  weeklyBarStack: {
+    width: 20,
+    height: 40,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceContainerLow,
+  },
+  weeklyBarFill: {
+    width: '100%' as any,
+  },
+  weeklyBarLabel: {
+    fontSize: 9,
+    color: colors.textMuted,
+    marginTop: 2,
+  },
+
+  // Skill level
+  skillRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  skillBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+  },
+  skillBtnActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  skillEmoji: { fontSize: 20, marginBottom: 2 },
+  skillLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  skillLabelActive: {
+    color: colors.onPrimary,
+  },
+
+  // Cuisine preferences
+  sectionSubtitle: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    marginBottom: spacing.sm,
+  },
+  cuisineGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  cuisineChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: colors.outlineVariant,
+    gap: 4,
+  },
+  cuisineChipActive: {
+    backgroundColor: colors.primary + '18',
+    borderColor: colors.primary,
+  },
+  cuisineEmoji: { fontSize: 16 },
+  cuisineLabel: {
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    color: colors.textSecondary,
+  },
+  cuisineLabelActive: {
+    color: colors.primary,
+  },
+
+  // Taste profile
+  tasteTagsWrap: {
+    gap: 6,
+  },
+  tasteTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  tasteTagText: {
+    fontSize: fontSize.sm,
+    color: colors.text,
+    fontWeight: '600',
+    width: 100,
+  },
+  tasteTagBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.primary,
+  },
+  tasteInsight: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
 });

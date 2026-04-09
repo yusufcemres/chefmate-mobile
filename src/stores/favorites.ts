@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { hapticLight } from '../utils/haptics';
+import { useOfflineCacheStore } from './offline-cache';
 
 interface FavoritesState {
   ids: string[];
@@ -17,23 +19,27 @@ export const useFavoritesStore = create<FavoritesState>((set, get) => ({
     try {
       const res = await api.get<any>('/favorites/ids');
       const data = res;
-      set({ ids: Array.isArray(data) ? data : [], loaded: true });
+      const ids = Array.isArray(data) ? data : [];
+      set({ ids, loaded: true });
+      // Sync offline cache with favorites
+      useOfflineCacheStore.getState().syncFavorites(ids).catch(() => {});
     } catch {
       set({ loaded: true });
     }
   },
 
   toggle: async (recipeId: string) => {
-    const { ids } = get();
+    const previousIds = [...get().ids];
+    const wasFav = previousIds.includes(recipeId);
     // Optimistic update
-    const wasFav = ids.includes(recipeId);
-    set({ ids: wasFav ? ids.filter((id) => id !== recipeId) : [...ids, recipeId] });
+    set({ ids: wasFav ? previousIds.filter((id) => id !== recipeId) : [...previousIds, recipeId] });
+    hapticLight();
 
     try {
       await api.post(`/favorites/${recipeId}`, {});
     } catch {
-      // Revert
-      set({ ids: wasFav ? [...get().ids, recipeId] : get().ids.filter((id) => id !== recipeId) });
+      // Revert to previous state
+      set({ ids: previousIds });
     }
   },
 

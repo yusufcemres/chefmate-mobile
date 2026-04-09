@@ -211,6 +211,11 @@ export interface ShoppingListItem {
   recipeId: string | null;
   sortOrder: number;
   createdAt: string;
+  product?: {
+    id: string;
+    productName: string;
+    category?: { id: string; name: string };
+  } | null;
 }
 
 // ========== HOUSEHOLDS ==========

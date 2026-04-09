@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
+  SectionList,
   TouchableOpacity,
   StyleSheet,
   Alert,
@@ -14,7 +15,8 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useShoppingStore } from '../../src/stores/shopping';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
+import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { EmptyState } from '../../src/components/EmptyState';
 import type { ShoppingList, ShoppingListItem } from '../../src/types';
 
 export default function ShoppingScreen() {
@@ -108,11 +110,13 @@ export default function ShoppingScreen() {
         )}
 
         {!loading && lists.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🛒</Text>
-            <Text style={styles.emptyTitle}>Henüz alışveriş listen yok</Text>
-            <Text style={styles.emptySubtitle}>Yeni bir liste oluştur veya tariften otomatik oluştur</Text>
-          </View>
+          <EmptyState
+            icon="shopping-cart"
+            title="Henüz alışveriş listen yok"
+            message="Yeni bir liste oluştur veya tariften otomatik oluştur."
+            ctaLabel="Yeni Liste"
+            onCta={handleCreateList}
+          />
         )}
 
         <FlatList
@@ -149,11 +153,48 @@ export default function ShoppingScreen() {
   }
 
   // ===== DETAIL VIEW =====
-  const sortedItems = [...(currentList?.items || [])].sort((a, b) => {
-    // Unchecked first, then by sortOrder
-    if (a.isChecked !== b.isChecked) return a.isChecked ? 1 : -1;
-    return a.sortOrder - b.sortOrder;
-  });
+  const CATEGORY_EMOJI: Record<string, string> = {
+    'sebze': '🥕', 'meyve': '🍎', 'et': '🥩', 'tavuk': '🍗',
+    'balık': '🐟', 'balik': '🐟', 'süt': '🥛', 'sut': '🥛',
+    'peynir': '🧀', 'baharat': '🌶️', 'tahıl': '🌾', 'tahil': '🌾',
+    'baklagil': '🫘', 'yağ': '🫒', 'yag': '🫒', 'içecek': '🍹',
+    'icecek': '🍹', 'konserve': '🥫', 'dondurulmuş': '🧊',
+  };
+
+  const getCategoryEmoji = (catName: string): string => {
+    const lower = catName.toLowerCase();
+    for (const [key, emoji] of Object.entries(CATEGORY_EMOJI)) {
+      if (lower.includes(key)) return emoji;
+    }
+    return '📦';
+  };
+
+  const sections = useMemo(() => {
+    const items = [...(currentList?.items || [])].sort((a, b) => {
+      if (a.isChecked !== b.isChecked) return a.isChecked ? 1 : -1;
+      return a.sortOrder - b.sortOrder;
+    });
+
+    const grouped = new Map<string, ShoppingListItem[]>();
+    for (const item of items) {
+      const catName = item.product?.category?.name || 'Diğer';
+      const list = grouped.get(catName) || [];
+      list.push(item);
+      grouped.set(catName, list);
+    }
+
+    // "Diğer" always last
+    const entries = [...grouped.entries()].sort((a, b) => {
+      if (a[0] === 'Diğer') return 1;
+      if (b[0] === 'Diğer') return -1;
+      return a[0].localeCompare(b[0], 'tr');
+    });
+
+    return entries.map(([title, data]) => ({ title, data }));
+  }, [currentList?.items]);
+
+  const checkedCount = currentList?.items?.filter((i) => i.isChecked).length || 0;
+  const totalCount = currentList?.items?.length || 0;
 
   return (
     <View style={styles.container}>
@@ -168,6 +209,16 @@ export default function ShoppingScreen() {
           <MaterialIcons name="add" size={22} color={colors.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Progress summary */}
+      {totalCount > 0 && (
+        <View style={styles.progressSummary}>
+          <Text style={styles.progressText}>{checkedCount}/{totalCount} tamamlandı</Text>
+          <View style={styles.progressBarDetail}>
+            <View style={[styles.progressFill, { width: `${(checkedCount / totalCount) * 100}%` }]} />
+          </View>
+        </View>
+      )}
 
       {/* Add item form */}
       {showAddItem && (
@@ -203,18 +254,31 @@ export default function ShoppingScreen() {
         </View>
       )}
 
-      {/* Items */}
-      <FlatList
-        data={sortedItems}
+      {/* Items grouped by category */}
+      <SectionList
+        sections={sections}
         keyExtractor={(item) => item.id}
+        stickySectionHeadersEnabled={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />}
+        contentContainerStyle={{ paddingBottom: 40 }}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📝</Text>
-            <Text style={styles.emptyTitle}>Liste boş</Text>
-            <Text style={styles.emptySubtitle}>➕ butonuna basarak ürün ekle</Text>
-          </View>
+          <EmptyState
+            icon="playlist-add"
+            title="Liste boş"
+            message="Ürün ekleyerek listeye başla."
+            ctaLabel="Ürün Ekle"
+            onCta={() => setShowAddItem(true)}
+          />
         }
+        renderSectionHeader={({ section }) => (
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionEmoji}>{getCategoryEmoji(section.title)}</Text>
+            <Text style={styles.sectionTitle}>{section.title}</Text>
+            <Text style={styles.sectionCount}>
+              {section.data.filter((i) => i.isChecked).length}/{section.data.length}
+            </Text>
+          </View>
+        )}
         renderItem={({ item }) => (
           <View style={[styles.itemRow, item.isChecked && styles.itemRowChecked]}>
             <TouchableOpacity style={styles.checkbox} onPress={() => handleToggle(item)}>
@@ -226,7 +290,7 @@ export default function ShoppingScreen() {
             </TouchableOpacity>
             <View style={styles.itemInfo}>
               <Text style={[styles.itemName, item.isChecked && styles.itemNameChecked]}>
-                {item.customName || item.productId || 'Ürün'}
+                {item.customName || item.product?.productName || 'Ürün'}
               </Text>
               <Text style={styles.itemQty}>
                 {item.quantity} {item.unit}
@@ -265,8 +329,8 @@ const styles = StyleSheet.create({
   // Empty state
   emptyState: { alignItems: 'center', marginTop: 60 },
   emptyIcon: { fontSize: 48, marginBottom: spacing.md },
-  emptyTitle: { fontSize: fontSize.lg, fontWeight: '700', color: colors.text },
-  emptySubtitle: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.xs },
+  emptyTitle: { fontSize: fontSize.lg, fontFamily: fonts.headingBold, color: colors.text },
+  emptySubtitle: { fontSize: fontSize.sm, fontFamily: fonts.bodyRegular, color: colors.textSecondary, marginTop: spacing.xs },
 
   // List cards
   listCard: {
@@ -336,6 +400,38 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   addConfirmText: { color: colors.textInverse, fontWeight: '700' },
+
+  // Progress summary
+  progressSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  progressText: { fontSize: fontSize.sm, fontWeight: '600', color: colors.text, minWidth: 90 },
+  progressBarDetail: {
+    flex: 1,
+    height: 4,
+    backgroundColor: colors.borderLight,
+    borderRadius: 2,
+    marginLeft: spacing.sm,
+  },
+
+  // Section headers
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    gap: 6,
+  },
+  sectionEmoji: { fontSize: 18 },
+  sectionTitle: { fontSize: fontSize.md, fontWeight: '700', color: colors.text, flex: 1 },
+  sectionCount: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: '600' },
 
   // Items
   itemRow: {

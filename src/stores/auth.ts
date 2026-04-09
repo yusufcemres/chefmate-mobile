@@ -25,9 +25,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   init: async () => {
     try {
       await api.init();
-      const res = await api.get<{ data: User }>('/auth/me');
-      set({ user: res as any, isAuthenticated: true, isLoading: false });
-      get().loadPreferences();
+      const user = await api.get<User>('/auth/me');
+      if (!(user as any)?.isActive) {
+        // Account disabled — force logout
+        api.setToken(null);
+        await api.setRefreshToken(null);
+        set({ user: null, isAuthenticated: false, isLoading: false });
+        return;
+      }
+      set({ user: user as any, isAuthenticated: true, isLoading: false });
+      await get().loadPreferences();
     } catch {
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
@@ -41,7 +48,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     api.setToken(accessToken);
     await api.setRefreshToken(refreshToken);
     set({ user, isAuthenticated: true });
-    get().loadPreferences();
+    await get().loadPreferences();
   },
 
   register: async (email, password, displayName) => {
