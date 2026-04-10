@@ -27,7 +27,7 @@ export class ErrorBoundary extends Component<PropsWithChildren, State> {
           <Text style={styles.message}>
             {this.state.error?.message || 'Beklenmeyen bir hata oluştu'}
           </Text>
-          <Pressable style={styles.button} onPress={this.handleReset}>
+          <Pressable style={styles.button} onPress={this.handleReset} accessibilityRole="button" accessibilityLabel="Tekrar dene">
             <Text style={styles.buttonText}>Tekrar Dene</Text>
           </Pressable>
         </View>

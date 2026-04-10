@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { registerForPushNotificationsAsync } from '../utils/notifications';
 
 interface ExpiringItem {
   id: string;
@@ -18,8 +19,10 @@ interface NotificationState {
   loading: boolean;
   error: string | null;
   pushEnabled: boolean;
+  expoPushToken: string | null;
 
   fetchExpiringItems: (days?: number) => Promise<void>;
+  requestPermissionAndRegister: () => Promise<boolean>;
   registerPushToken: (token: string) => Promise<void>;
   removePushToken: () => Promise<void>;
   triggerExpiryCheck: () => Promise<{ itemsExpiring: number; notificationsSent: number }>;
@@ -30,6 +33,7 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   loading: false,
   error: null,
   pushEnabled: false,
+  expoPushToken: null,
 
   fetchExpiringItems: async (days = 3) => {
     set({ loading: true, error: null });
@@ -41,14 +45,26 @@ export const useNotificationStore = create<NotificationState>((set) => ({
     }
   },
 
+  requestPermissionAndRegister: async () => {
+    try {
+      const token = await registerForPushNotificationsAsync();
+      if (!token) return false;
+      await api.post('/notifications/fcm-token', { fcmToken: token });
+      set({ pushEnabled: true, expoPushToken: token });
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
   registerPushToken: async (token) => {
     await api.post('/notifications/fcm-token', { fcmToken: token });
-    set({ pushEnabled: true });
+    set({ pushEnabled: true, expoPushToken: token });
   },
 
   removePushToken: async () => {
     await api.delete('/notifications/fcm-token');
-    set({ pushEnabled: false });
+    set({ pushEnabled: false, expoPushToken: null });
   },
 
   triggerExpiryCheck: async () => {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -41,7 +42,7 @@ interface CookingData {
   steps: CookingStep[];
 }
 
-export default function CookingModeScreen() {
+function CookingModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
   const [data, setData] = useState<CookingData | null>(null);
@@ -317,7 +318,7 @@ export default function CookingModeScreen() {
       {/* ===== Main Step Content (swipeable) ===== */}
       <View style={styles.stepMain} {...panResponder.panHandlers}>
         {/* Big step number */}
-        <View style={styles.stepNumberContainer}>
+        <View style={styles.stepNumberContainer} accessibilityLabel={'Adım ' + step.stepNumber + ' / ' + data.totalSteps}>
           <Text style={styles.stepNumberBig}>{step.stepNumber}</Text>
           <Text style={styles.stepNumberLabel}>/ {data.totalSteps}</Text>
         </View>
@@ -360,6 +361,8 @@ export default function CookingModeScreen() {
                     <TouchableOpacity
                       style={[styles.timerControlBtn, timerRunning && styles.timerPauseBtn]}
                       onPress={() => setTimerRunning(!timerRunning)}
+                      accessibilityRole="button"
+                      accessibilityLabel={timerRunning ? 'Zamanlayıcıyı durdur' : 'Zamanlayıcıyı başlat'}
                     >
                       <MaterialIcons
                         name={timerRunning ? 'pause' : 'play-arrow'}
@@ -371,6 +374,8 @@ export default function CookingModeScreen() {
                   <TouchableOpacity
                     style={styles.timerResetBtn}
                     onPress={resetTimer}
+                    accessibilityRole="button"
+                    accessibilityLabel="Zamanlayıcıyı sıfırla"
                   >
                     <MaterialIcons name="refresh" size={18} color={colors.textMuted} />
                   </TouchableOpacity>
@@ -389,6 +394,8 @@ export default function CookingModeScreen() {
               <TouchableOpacity
                 style={styles.startTimerBtn}
                 onPress={() => startTimer(step.durationMinutes!)}
+                accessibilityRole="button"
+                accessibilityLabel="Zamanlayıcıyı başlat"
               >
                 <MaterialIcons name="timer" size={20} color={colors.onPrimary} />
                 <Text style={styles.startTimerText}>
@@ -406,6 +413,8 @@ export default function CookingModeScreen() {
           style={[styles.navBtn, styles.prevBtn, isFirst && styles.navBtnDisabled]}
           onPress={() => goToStep(currentStep - 1)}
           disabled={isFirst}
+          accessibilityRole="button"
+          accessibilityLabel="Önceki adım"
         >
           <MaterialIcons name="arrow-back" size={20} color={isFirst ? colors.textMuted : colors.text} />
           <Text style={[styles.navBtnText, isFirst && styles.navBtnTextDisabled]}>Önceki</Text>
@@ -415,6 +424,8 @@ export default function CookingModeScreen() {
           <TouchableOpacity
             style={[styles.navBtn, styles.completeBtn]}
             onPress={handleComplete}
+            accessibilityRole="button"
+            accessibilityLabel="Tarifi tamamla"
           >
             <MaterialIcons name="check-circle" size={22} color="#fff" />
             <Text style={styles.completeBtnText}>Tamamla</Text>
@@ -423,6 +434,8 @@ export default function CookingModeScreen() {
           <TouchableOpacity
             style={[styles.navBtn, styles.nextBtn]}
             onPress={() => goToStep(currentStep + 1)}
+            accessibilityRole="button"
+            accessibilityLabel="Sonraki adım"
           >
             <Text style={styles.nextBtnText}>Sonraki</Text>
             <MaterialIcons name="arrow-forward" size={20} color={colors.onPrimary} />
@@ -826,3 +839,5 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
 });
+
+export default withScreenErrorBoundary(CookingModeScreen, 'Pişirme Modu');

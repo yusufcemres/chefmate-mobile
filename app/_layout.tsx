@@ -1,9 +1,10 @@
 import { useEffect, useCallback, useState } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
@@ -72,6 +73,16 @@ export default function RootLayout() {
 
 function ThemedApp({ fontsLoaded, onLayoutReady }: { fontsLoaded: boolean; onLayoutReady: () => void }) {
   const { isDark, colors: c } = useTheme();
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.type === 'expiry_alert' || data?.type === 'expiry_warning') {
+        router.push('/notifications');
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }} onLayout={onLayoutReady}>

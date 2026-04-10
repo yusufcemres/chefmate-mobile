@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -72,7 +73,7 @@ interface WasteStats {
   weeklyBreakdown: Array<{ week: string; consumed: number; wasted: number }>;
 }
 
-export default function ProfileScreen() {
+function ProfileScreen() {
   const { user, preferences, logout, updatePreferences } = useAuthStore();
   const { ids: favoriteIds, loaded: favsLoaded, fetch: fetchFavs } = useFavoritesStore();
   const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
@@ -173,12 +174,12 @@ export default function ProfileScreen() {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* ===== Profile Header ===== */}
-      <View style={styles.profileHeader}>
-        <View style={styles.avatarContainer}>
+      <View style={styles.profileHeader} accessibilityLabel={`Profil: ${user?.displayName || 'ChefMate Kullanıcı'}`}>
+        <View style={styles.avatarContainer} accessibilityLabel={`${user?.displayName || 'Kullanıcı'} profil fotoğrafı`}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{user?.displayName?.charAt(0)?.toUpperCase() || '?'}</Text>
           </View>
-          <View style={styles.verifiedBadge}>
+          <View style={styles.verifiedBadge} accessibilityLabel="Doğrulanmış hesap">
             <MaterialIcons name="verified" size={16} color={colors.onPrimary} />
           </View>
         </View>
@@ -189,7 +190,11 @@ export default function ProfileScreen() {
       {/* ===== Bento Stats Grid ===== */}
       <View style={styles.bentoGrid}>
         {/* Large card - Favorites */}
-        <View style={[styles.bentoCard, styles.bentoLarge]}>
+        <View
+          style={[styles.bentoCard, styles.bentoLarge]}
+          accessibilityLabel={`${stats.totalFavorites} favori tarif`}
+          accessibilityRole="summary"
+        >
           <View style={styles.bentoIconWrap}>
             <MaterialIcons name="favorite" size={28} color="#FF4B6E" />
           </View>
@@ -198,12 +203,20 @@ export default function ProfileScreen() {
         </View>
         {/* Right column - 2 small cards */}
         <View style={styles.bentoColumn}>
-          <View style={[styles.bentoCard, styles.bentoSmall]}>
+          <View
+            style={[styles.bentoCard, styles.bentoSmall]}
+            accessibilityLabel={`${stats.inventoryCount} stok ürün`}
+            accessibilityRole="summary"
+          >
             <MaterialIcons name="kitchen" size={22} color={colors.tertiary} />
             <Text style={styles.bentoSmallValue}>{stats.inventoryCount}</Text>
             <Text style={styles.bentoSmallLabel}>Stok Ürün</Text>
           </View>
-          <View style={[styles.bentoCard, styles.bentoSmall]}>
+          <View
+            style={[styles.bentoCard, styles.bentoSmall]}
+            accessibilityLabel={`${stats.mealPlanCount} yemek planı`}
+            accessibilityRole="summary"
+          >
             <MaterialIcons name="event-note" size={22} color={colors.secondary} />
             <Text style={styles.bentoSmallValue}>{stats.mealPlanCount}</Text>
             <Text style={styles.bentoSmallLabel}>Yemek Planı</Text>
@@ -322,6 +335,9 @@ export default function ProfileScreen() {
                   key={t.key}
                   style={[styles.themeBtn, themeMode === t.key && styles.themeBtnActive]}
                   onPress={() => setThemeMode(t.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t.label} tema`}
+                  accessibilityState={{ selected: themeMode === t.key }}
                 >
                   <MaterialIcons
                     name={t.icon}
@@ -347,6 +363,8 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={styles.servingBtn}
                 onPress={() => setServingSize(String(Math.max(1, parseInt(servingSize) - 1)))}
+                accessibilityRole="button"
+                accessibilityLabel="Porsiyon azalt"
               >
                 <MaterialIcons name="remove" size={20} color={colors.primary} />
               </TouchableOpacity>
@@ -356,10 +374,13 @@ export default function ProfileScreen() {
                 value={servingSize}
                 onChangeText={setServingSize}
                 textAlign="center"
+                accessibilityLabel={`Porsiyon sayısı: ${servingSize}`}
               />
               <TouchableOpacity
                 style={styles.servingBtn}
                 onPress={() => setServingSize(String(parseInt(servingSize) + 1))}
+                accessibilityRole="button"
+                accessibilityLabel="Porsiyon artır"
               >
                 <MaterialIcons name="add" size={20} color={colors.primary} />
               </TouchableOpacity>
@@ -379,6 +400,9 @@ export default function ProfileScreen() {
                   key={s.key}
                   style={[styles.skillBtn, selectedSkill === s.key && styles.skillBtnActive]}
                   onPress={() => setSelectedSkill(s.key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${s.label} pişirme seviyesi`}
+                  accessibilityState={{ selected: selectedSkill === s.key }}
                 >
                   <Text style={styles.skillEmoji}>{s.emoji}</Text>
                   <Text style={[styles.skillLabel, selectedSkill === s.key && styles.skillLabelActive]}>{s.label}</Text>
@@ -400,6 +424,9 @@ export default function ProfileScreen() {
                   key={c.slug}
                   style={[styles.cuisineChip, selectedCuisines.includes(c.slug) && styles.cuisineChipActive]}
                   onPress={() => toggleCuisine(c.slug)}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ selected: selectedCuisines.includes(c.slug) }}
+                  accessibilityLabel={c.label}
                 >
                   <Text style={styles.cuisineEmoji}>{c.emoji}</Text>
                   <Text style={[styles.cuisineLabel, selectedCuisines.includes(c.slug) && styles.cuisineLabelActive]}>{c.label}</Text>
@@ -442,7 +469,14 @@ export default function ProfileScreen() {
           )}
 
           {/* Save */}
-          <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.disabled]}
+            onPress={handleSave}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel={saving ? 'Kaydediliyor' : 'Tercihleri kaydet'}
+            accessibilityState={{ disabled: saving }}
+          >
             <MaterialIcons name="save" size={20} color={colors.onPrimary} />
             <Text style={styles.saveBtnText}>{saving ? 'Kaydediliyor...' : 'Tercihleri Kaydet'}</Text>
           </TouchableOpacity>
@@ -465,6 +499,8 @@ export default function ProfileScreen() {
                   onValueChange={(v) => setSelectedDiets((prev) => ({ ...prev, [d.key]: v }))}
                   trackColor={{ true: colors.primaryContainer, false: colors.surfaceContainerHigh }}
                   thumbColor={selectedDiets[d.key] ? colors.primary : colors.surfaceContainerHighest}
+                  accessibilityRole="switch"
+                  accessibilityLabel={`${d.label} beslenme tercihi`}
                 />
               </View>
             ))}
@@ -484,6 +520,9 @@ export default function ProfileScreen() {
                     key={a}
                     style={[styles.chip, active && styles.chipActive]}
                     onPress={() => toggleAllergen(a)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ selected: active }}
+                    accessibilityLabel={a}
                   >
                     {active && <MaterialIcons name="check" size={14} color={colors.error} />}
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>{a}</Text>
@@ -494,7 +533,14 @@ export default function ProfileScreen() {
           </View>
 
           {/* Save */}
-          <TouchableOpacity style={[styles.saveBtn, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.disabled]}
+            onPress={handleSave}
+            disabled={saving}
+            accessibilityRole="button"
+            accessibilityLabel={saving ? 'Kaydediliyor' : 'Tercihleri kaydet'}
+            accessibilityState={{ disabled: saving }}
+          >
             <MaterialIcons name="save" size={20} color={colors.onPrimary} />
             <Text style={styles.saveBtnText}>{saving ? 'Kaydediliyor...' : 'Tercihleri Kaydet'}</Text>
           </TouchableOpacity>
@@ -502,7 +548,12 @@ export default function ProfileScreen() {
       )}
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+      <TouchableOpacity
+        style={styles.logoutBtn}
+        onPress={handleLogout}
+        accessibilityRole="button"
+        accessibilityLabel="Çıkış yap"
+      >
         <MaterialIcons name="logout" size={18} color={colors.error} />
         <Text style={styles.logoutText}>Çıkış Yap</Text>
       </TouchableOpacity>
@@ -954,3 +1005,5 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
 });
+
+export default withScreenErrorBoundary(ProfileScreen, 'Profil');

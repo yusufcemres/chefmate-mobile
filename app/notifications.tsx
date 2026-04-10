@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -45,8 +46,8 @@ const STORAGE_ICONS: Record<string, string> = {
   OTHER: '📦',
 };
 
-export default function NotificationsScreen() {
-  const { expiringItems, loading, pushEnabled, fetchExpiringItems, registerPushToken, removePushToken } = useNotificationStore();
+function NotificationsScreen() {
+  const { expiringItems, loading, pushEnabled, fetchExpiringItems, requestPermissionAndRegister, removePushToken } = useNotificationStore();
   const [daysAhead, setDaysAhead] = useState(3);
 
   useEffect(() => {
@@ -60,10 +61,12 @@ export default function NotificationsScreen() {
   const handleTogglePush = async (value: boolean) => {
     try {
       if (value) {
-        // In a real app, get the actual push token from Expo Notifications
-        // For now, register a placeholder
-        const mockToken = `expo-${Platform.OS}-${Date.now()}`;
-        await registerPushToken(mockToken);
+        const success = await requestPermissionAndRegister();
+        if (!success) {
+          const msg = 'Bildirim izni reddedildi. Ayarlardan etkinleştirebilirsiniz.';
+          Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Bildirimler', msg);
+          return;
+        }
         const msg = 'Bildirimler etkinleştirildi!';
         Platform.OS === 'web' ? window.alert(msg) : Alert.alert('Bildirimler', msg);
       } else {
@@ -79,7 +82,7 @@ export default function NotificationsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Geri dön">
           <Text style={styles.backBtn}>← Geri</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bildirimler</Text>
@@ -97,6 +100,9 @@ export default function NotificationsScreen() {
           onValueChange={handleTogglePush}
           trackColor={{ true: colors.primaryLight, false: colors.border }}
           thumbColor={pushEnabled ? colors.primary : '#f4f3f4'}
+          accessibilityLabel="Push bildirimleri"
+          accessibilityRole="switch"
+          accessibilityState={{ checked: pushEnabled }}
         />
       </View>
 
@@ -108,6 +114,9 @@ export default function NotificationsScreen() {
             key={d}
             style={[styles.filterChip, daysAhead === d && styles.filterChipActive]}
             onPress={() => setDaysAhead(d)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: daysAhead === d }}
+            accessibilityLabel={d + ' gün filtresi'}
           >
             <Text style={[styles.filterChipText, daysAhead === d && styles.filterChipTextActive]}>
               {d} gün
@@ -248,3 +257,5 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: borderRadius.full },
   badgeText: { fontSize: fontSize.xs, fontWeight: '700' },
 });
+
+export default withScreenErrorBoundary(NotificationsScreen, 'Bildirimler');

@@ -102,7 +102,7 @@ export default function OnboardingScreen() {
       {/* Progress */}
       <View style={s.progressRow}>
         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-          <View key={i} style={[s.progressBar, i <= step && s.progressBarActive]} />
+          <View key={i} style={[s.progressBar, i <= step && s.progressBarActive]} accessibilityLabel={'Adım ' + (i + 1)} />
         ))}
       </View>
 
@@ -136,6 +136,9 @@ export default function OnboardingScreen() {
                       key={c.slug}
                       style={s.cuisineCircle}
                       onPress={() => toggleCuisine(c.slug)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={c.name}
                     >
                       <View style={[s.cuisineIconWrap, active && s.cuisineIconWrapActive]}>
                         <Text style={s.cuisineEmoji}>{c.emoji}</Text>
@@ -192,6 +195,9 @@ export default function OnboardingScreen() {
                       key={d.key}
                       style={[s.dietCard, active && s.dietCardActive]}
                       onPress={() => toggleDiet(d.key)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={d.label}
                     >
                       <Text style={s.dietEmoji}>{d.emoji}</Text>
                       <Text style={[s.dietLabel, active && s.dietLabelActive]}>{d.label}</Text>
@@ -216,6 +222,9 @@ export default function OnboardingScreen() {
                       key={a}
                       style={[s.allergenChip, active && s.allergenChipActive]}
                       onPress={() => toggleAllergen(a)}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={a}
                     >
                       {active && <MaterialIcons name="close" size={14} color={colors.error} />}
                       <Text style={[s.allergenText, active && s.allergenTextActive]}>{a}</Text>
@@ -247,17 +256,17 @@ export default function OnboardingScreen() {
       <View style={s.bottomBar}>
         {step === 0 ? (
           <>
-            <TouchableOpacity onPress={handleSkip} hitSlop={12}>
+            <TouchableOpacity onPress={handleSkip} hitSlop={12} accessibilityRole="button" accessibilityLabel="Atla">
               <Text style={s.skipText}>Atla</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={s.nextBtn} onPress={next}>
+            <TouchableOpacity style={s.nextBtn} onPress={next} accessibilityRole="button" accessibilityLabel="Devam">
               <Text style={s.nextBtnText}>Devam</Text>
               <MaterialIcons name="arrow-forward" size={18} color={colors.onPrimary} />
             </TouchableOpacity>
           </>
         ) : (
           <>
-            <TouchableOpacity style={s.backBtn} onPress={back}>
+            <TouchableOpacity style={s.backBtn} onPress={back} accessibilityRole="button" accessibilityLabel="Geri">
               <MaterialIcons name="arrow-back" size={18} color={colors.primary} />
               <Text style={s.backText}>Geri</Text>
             </TouchableOpacity>
@@ -265,6 +274,8 @@ export default function OnboardingScreen() {
               style={[s.finishBtn, saving && { opacity: 0.5 }]}
               onPress={handleFinish}
               disabled={saving}
+              accessibilityRole="button"
+              accessibilityLabel={saving ? 'Kaydediliyor' : 'Keşfetmeye Başla'}
             >
               <MaterialIcons name="auto-awesome" size={18} color={colors.onPrimary} />
               <Text style={s.finishBtnText}>

@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -159,7 +160,7 @@ function RecipeCard({ item, onFavToggle, isFav, size = 'normal' }: {
 }
 
 // ===================== MAIN HOME SCREEN =====================
-export default function HomeScreen() {
+function HomeScreen() {
   const user = useAuthStore((s) => s.user);
   const { isFavorite, toggle: toggleFav, fetch: fetchFavs, loaded: favsLoaded } = useFavoritesStore();
 
@@ -429,9 +430,11 @@ export default function HomeScreen() {
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
             returnKeyType="search"
+            accessibilityLabel="Tarif ara"
+            accessibilityHint="Tarif adı veya malzeme yazın"
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => handleSearch('')}>
+            <TouchableOpacity onPress={() => handleSearch('')} accessibilityLabel="Aramayı temizle" accessibilityRole="button">
               <MaterialIcons name="close" size={18} color={colors.textMuted} />
             </TouchableOpacity>
           )}
@@ -448,6 +451,8 @@ export default function HomeScreen() {
                   key={term}
                   style={styles.popularChip}
                   onPress={() => handleSearch(term)}
+                  accessibilityLabel={term + ' ara'}
+                  accessibilityRole="button"
                 >
                   <Text style={styles.popularChipText}>{term}</Text>
                 </TouchableOpacity>
@@ -492,6 +497,8 @@ export default function HomeScreen() {
           style={styles.heroCard}
           onPress={() => router.push(`/recipe/${heroRecipe.id}`)}
           activeOpacity={0.9}
+          accessibilityLabel={`${heroRecipe.title}, ${heroRecipe.totalTimeMinutes || 0} dakika, ${difficultyLabel[heroRecipe.difficulty] || heroRecipe.difficulty}`}
+          accessibilityHint="Tarif detayına git"
         >
           {heroRecipe.imageUrl ? (
             <Image source={{ uri: heroRecipe.imageUrl }} style={styles.heroImage} resizeMode="cover" />
@@ -520,6 +527,9 @@ export default function HomeScreen() {
               key={cat.id}
               style={[styles.categoryPill, activeCategory === cat.slug && styles.categoryPillActive]}
               onPress={() => onCategoryPress(cat.slug)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: activeCategory === cat.slug }}
+              accessibilityLabel={cat.name + ' kategorisi'}
             >
               <Text style={styles.categoryPillEmoji}>{cat.emoji || '🍽️'}</Text>
               <Text style={[styles.categoryPillText, activeCategory === cat.slug && styles.categoryPillTextActive]}>
@@ -556,6 +566,8 @@ export default function HomeScreen() {
           <TouchableOpacity
             onPress={() => { setActiveCategory(null); fetchAllRecipes(true, null, null); }}
             style={styles.clearFilterBtn}
+            accessibilityLabel="Filtreleri temizle"
+            accessibilityRole="button"
           >
             <Text style={styles.clearFilterText}>Temizle</Text>
           </TouchableOpacity>
@@ -647,13 +659,15 @@ export default function HomeScreen() {
             <Text style={styles.importSourceChip}>▶️ YouTube</Text>
           </View>
           <View style={styles.importActions}>
-            <TouchableOpacity style={styles.importCancelBtn} onPress={() => { setShowImport(false); setImportUrl(''); }}>
+            <TouchableOpacity style={styles.importCancelBtn} onPress={() => { setShowImport(false); setImportUrl(''); }} accessibilityLabel="İptal" accessibilityRole="button">
               <Text style={styles.importCancelText}>İptal</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.importConfirmBtn, (importing || !importUrl.trim()) && { opacity: 0.5 }]}
               onPress={handleImportUrl}
               disabled={importing || !importUrl.trim()}
+              accessibilityLabel="İçe Aktar"
+              accessibilityRole="button"
             >
               {importing ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -1383,3 +1397,5 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
 });
+
+export default withScreenErrorBoundary(HomeScreen, 'Keşfet');

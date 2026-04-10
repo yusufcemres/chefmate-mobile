@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -56,7 +57,7 @@ function formatDateShort(d: string) {
   return `${dt.getDate()}.${String(dt.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function KitchenScreen() {
+function KitchenScreen() {
   const user = useAuthStore((s) => s.user);
   const [segment, setSegment] = useState<Segment>('stok');
 
@@ -195,7 +196,7 @@ export default function KitchenScreen() {
       {/* Header */}
       <View style={s.header}>
         <Text style={s.headerTitle}>Mutfağım</Text>
-        <TouchableOpacity style={s.addFab} onPress={() => setShowAdd(true)}>
+        <TouchableOpacity style={s.addFab} onPress={() => setShowAdd(true)} accessibilityRole="button" accessibilityLabel="Yeni ürün ekle">
           <MaterialIcons name="add" size={22} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
@@ -207,6 +208,9 @@ export default function KitchenScreen() {
             key={seg}
             style={[s.segBtn, segment === seg && s.segBtnActive]}
             onPress={() => setSegment(seg)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: segment === seg }}
+            accessibilityLabel={seg === 'stok' ? `Stok (${activeItems.length})` : seg === 'plan' ? 'Plan' : 'Liste'}
           >
             <MaterialIcons
               name={seg === 'stok' ? 'kitchen' : seg === 'plan' ? 'calendar-today' : 'checklist'}
@@ -250,7 +254,7 @@ export default function KitchenScreen() {
             const color = days === null ? colors.textMuted : days <= 0 ? colors.error : days <= 3 ? colors.warning : colors.success;
             const pct = days === null ? 100 : Math.max(0, Math.min(100, (days / 30) * 100));
             return (
-              <TouchableOpacity style={s.invCard} onLongPress={() => handleDeleteInventory(item)} activeOpacity={0.8}>
+              <TouchableOpacity style={s.invCard} onLongPress={() => handleDeleteInventory(item)} activeOpacity={0.8} accessibilityLabel={`${(item.product as any)?.productName || 'Ürün'}, ${item.quantityDisplay ?? item.quantity} ${item.displayUnit}`}>
                 <Text style={s.invEmoji}>{getCatEmoji((item as any).product?.category?.name || '')}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={s.invName}>{(item.product as any)?.productName || 'Ürün'}</Text>
@@ -282,7 +286,7 @@ export default function KitchenScreen() {
           refreshControl={<RefreshControl refreshing={planLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
         >
           {/* AI Generate hero */}
-          <TouchableOpacity style={s.aiHeroCard} onPress={handleAiPlan} disabled={aiGenerating}>
+          <TouchableOpacity style={s.aiHeroCard} onPress={handleAiPlan} disabled={aiGenerating} accessibilityRole="button" accessibilityLabel="AI ile yemek planı oluştur">
             <MaterialIcons name="auto-awesome" size={28} color="#fff" />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <Text style={s.aiHeroTitle}>{aiGenerating ? 'AI plan oluşturuyor...' : 'AI ile Haftalık Plan'}</Text>
@@ -390,7 +394,7 @@ export default function KitchenScreen() {
               <Text style={s.backText}>Listeler</Text>
             </TouchableOpacity>
             <Text style={s.subTitle} numberOfLines={1}>{currentList.name}</Text>
-            <TouchableOpacity onPress={() => setShowAddShopItem(!showAddShopItem)}>
+            <TouchableOpacity onPress={() => setShowAddShopItem(!showAddShopItem)} accessibilityRole="button" accessibilityLabel="Listeye ürün ekle">
               <MaterialIcons name="add" size={22} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -414,7 +418,7 @@ export default function KitchenScreen() {
             refreshControl={<RefreshControl refreshing={shopLoading} onRefresh={onRefresh} tintColor={colors.primary} />}
             renderItem={({ item }) => (
               <View style={[s.shopItem, item.isChecked && { opacity: 0.5 }]}>
-                <TouchableOpacity onPress={() => toggleItem(currentList.id, item.id, !item.isChecked)}>
+                <TouchableOpacity onPress={() => toggleItem(currentList.id, item.id, !item.isChecked)} accessibilityRole="checkbox" accessibilityState={{ checked: item.isChecked }} accessibilityLabel={item.customName || item.product?.productName || 'Ürün'}>
                   <MaterialIcons name={item.isChecked ? 'check-circle' : 'radio-button-unchecked'} size={24} color={item.isChecked ? colors.primary : colors.outlineVariant} />
                 </TouchableOpacity>
                 <View style={{ flex: 1, marginLeft: 10 }}>
@@ -739,3 +743,5 @@ const s = StyleSheet.create({
   },
   primaryBtnText: { color: colors.onPrimary, fontFamily: fonts.headingBold, fontSize: fontSize.md },
 });
+
+export default withScreenErrorBoundary(KitchenScreen, 'Mutfağım');

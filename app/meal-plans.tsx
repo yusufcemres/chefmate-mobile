@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -57,7 +58,7 @@ function getDateRange(days: number): { start: string; end: string } {
   };
 }
 
-export default function MealPlansScreen() {
+function MealPlansScreen() {
   const { plans, currentPlan, loading, fetchPlans, fetchPlan, createPlan, toggleCooked, removeItem, deletePlan, generateShoppingList } = useMealPlanStore();
 
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -192,7 +193,7 @@ export default function MealPlansScreen() {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={() => router.back()} accessibilityRole="button" accessibilityLabel="Geri dön">
             <Text style={styles.backBtn}>← Geri</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Yemek Planlarım</Text>
@@ -392,7 +393,7 @@ export default function MealPlansScreen() {
                       <View style={[styles.progressFill, { width: `${(cookedCount / itemCount) * 100}%` }]} />
                     </View>
                   )}
-                  <TouchableOpacity onPress={() => handleDeletePlan(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <TouchableOpacity onPress={() => handleDeletePlan(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Planı sil">
                     <Text style={{ fontSize: 16 }}>🗑️</Text>
                   </TouchableOpacity>
                 </View>
@@ -498,13 +499,13 @@ export default function MealPlansScreen() {
         </View>
       }
       renderSectionHeader={({ section }) => (
-        <View style={styles.dateHeader}>
+        <View style={styles.dateHeader} accessibilityRole="header">
           <Text style={styles.dateHeaderText}>{formatDate(section.title)}</Text>
         </View>
       )}
       renderItem={({ item }) => (
-        <View style={[styles.mealItem, item.isCooked && styles.mealItemCooked]}>
-          <TouchableOpacity style={styles.cookCheckbox} onPress={() => handleToggle(item)}>
+        <View style={[styles.mealItem, item.isCooked && styles.mealItemCooked]} accessibilityLabel={(MEAL_TYPE_LABELS[item.mealType] || item.mealType) + ' - ' + (item.recipe?.title || 'Tarif')}>
+          <TouchableOpacity style={styles.cookCheckbox} onPress={() => handleToggle(item)} accessibilityRole="checkbox" accessibilityState={{ checked: item.isCooked }} accessibilityLabel={item.isCooked ? 'Pişirildi olarak işaretli' : 'Pişirilmedi olarak işaretli'}>
             <Text style={{ fontSize: 20 }}>{item.isCooked ? '✅' : '⬜'}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -537,7 +538,7 @@ export default function MealPlansScreen() {
               ) : null}
             </View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => handleRemoveItem(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <TouchableOpacity onPress={() => handleRemoveItem(item)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} accessibilityRole="button" accessibilityLabel="Tarifi plandan kaldır">
             <Text style={{ fontSize: 14, color: colors.error }}>✕</Text>
           </TouchableOpacity>
         </View>
@@ -549,11 +550,11 @@ export default function MealPlansScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setViewMode('list')}>
+        <TouchableOpacity onPress={() => setViewMode('list')} accessibilityRole="button" accessibilityLabel="Planlara dön">
           <Text style={styles.backBtn}>← Planlar</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{currentPlan?.name}</Text>
-        <TouchableOpacity onPress={handleGenerateShoppingList}>
+        <TouchableOpacity onPress={handleGenerateShoppingList} accessibilityRole="button" accessibilityLabel="Alışveriş listesi oluştur">
           <Text style={{ fontSize: 22 }}>🛒</Text>
         </TouchableOpacity>
       </View>
@@ -913,3 +914,5 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary + '18',
   },
 });
+
+export default withScreenErrorBoundary(MealPlansScreen, 'Yemek Planı');

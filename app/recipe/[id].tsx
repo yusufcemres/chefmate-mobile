@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -48,7 +49,7 @@ function getRecipeTags(recipe: any) { return (recipe.tags || []).map((rt: any) =
 function getCuisineTag(recipe: any) { return getRecipeTags(recipe).find((t: any) => t.type === 'CUISINE'); }
 function getCategoryTag(recipe: any) { return getRecipeTags(recipe).find((t: any) => t.type === 'CATEGORY'); }
 
-export default function RecipeDetailScreen() {
+function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -969,3 +970,5 @@ const styles = StyleSheet.create({
   },
   cookBtnText: { color: colors.onPrimary, fontFamily: 'Jakarta-ExtraBold', fontSize: fontSize.lg },
 });
+
+export default withScreenErrorBoundary(RecipeDetailScreen, 'Tarif Detayı');
