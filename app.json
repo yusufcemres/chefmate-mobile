@@ -23,12 +23,16 @@
         "backgroundColor": "#E66B3D"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.chefmate.app",
-      "usesCleartextTraffic": true
+      "package": "com.chefmate.app"
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "chefmate-mobile"
+      }
     },
     "plugins": [
       "expo-router",

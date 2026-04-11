@@ -55,16 +55,18 @@ class ApiClient {
     const { method = 'GET', body, token } = options;
     const authToken = token ?? this.accessToken;
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const isFormData = body instanceof FormData;
+    const headers: Record<string, string> = {};
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json';
+    }
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
     const config: RequestInit = { method, headers };
     if (body && method !== 'GET') {
-      config.body = JSON.stringify(body);
+      config.body = isFormData ? body : JSON.stringify(body);
     }
 
     const res = await fetch(`${API_BASE}${endpoint}`, config);
