@@ -218,10 +218,15 @@ function CookingModeScreen() {
           <MaterialIcons name="close" size={22} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.topBarCenter}>
-          <Text style={styles.topBarTitle} numberOfLines={1}>{data.title}</Text>
-          <Text style={styles.topBarSub}>
-            {data.totalTimeMinutes}dk · {data.totalSteps} adım
-          </Text>
+          <Text style={styles.topBarBrand}>CHEFMATE</Text>
+          <View style={styles.topProgressPill}>
+            <View style={styles.topProgressTrack}>
+              <View style={[styles.topProgressFill, { width: `${progressPercent}%` }]} />
+            </View>
+            <Text style={styles.topProgressLabel}>
+              STEP {String(currentStep + 1).padStart(2, '0')} / {String(data.totalSteps).padStart(2, '0')}
+            </Text>
+          </View>
         </View>
         <TouchableOpacity
           style={[styles.voiceToggle, voiceEnabled && styles.voiceToggleActive]}
@@ -410,35 +415,34 @@ function CookingModeScreen() {
       {/* ===== Bottom Navigation ===== */}
       <View style={styles.bottomNav}>
         <TouchableOpacity
-          style={[styles.navBtn, styles.prevBtn, isFirst && styles.navBtnDisabled]}
+          style={[styles.prevBtn, isFirst && styles.navBtnDisabled]}
           onPress={() => goToStep(currentStep - 1)}
           disabled={isFirst}
           accessibilityRole="button"
           accessibilityLabel="Önceki adım"
         >
-          <MaterialIcons name="arrow-back" size={20} color={isFirst ? colors.textMuted : colors.text} />
-          <Text style={[styles.navBtnText, isFirst && styles.navBtnTextDisabled]}>Önceki</Text>
+          <MaterialIcons name="arrow-back" size={22} color={isFirst ? colors.textMuted : colors.text} />
         </TouchableOpacity>
 
         {isLast ? (
           <TouchableOpacity
-            style={[styles.navBtn, styles.completeBtn]}
+            style={styles.completeBtn}
             onPress={handleComplete}
             accessibilityRole="button"
             accessibilityLabel="Tarifi tamamla"
           >
+            <Text style={styles.completeBtnText}>TAMAMLA</Text>
             <MaterialIcons name="check-circle" size={22} color="#fff" />
-            <Text style={styles.completeBtnText}>Tamamla</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            style={[styles.navBtn, styles.nextBtn]}
+            style={styles.nextBtn}
             onPress={() => goToStep(currentStep + 1)}
             accessibilityRole="button"
             accessibilityLabel="Sonraki adım"
           >
-            <Text style={styles.nextBtnText}>Sonraki</Text>
-            <MaterialIcons name="arrow-forward" size={20} color={colors.onPrimary} />
+            <Text style={styles.nextBtnText}>DEVAM ET</Text>
+            <MaterialIcons name="arrow-forward" size={22} color={colors.onPrimaryContainer} />
           </TouchableOpacity>
         )}
       </View>
@@ -488,17 +492,35 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  topBarTitle: {
+  topBarBrand: {
     fontSize: fontSize.md,
-    fontFamily: fonts.headingBold,
-    color: colors.text,
-    letterSpacing: -0.3,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.primaryContainer,
+    letterSpacing: 2,
   },
-  topBarSub: {
-    fontSize: fontSize.xs,
-    fontFamily: fonts.bodyRegular,
-    color: colors.textMuted,
-    marginTop: 1,
+  topProgressPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  topProgressTrack: {
+    width: 80,
+    height: 3,
+    backgroundColor: colors.surfaceContainerHighest,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  topProgressFill: {
+    height: 3,
+    backgroundColor: colors.primaryContainer,
+    borderRadius: 2,
+  },
+  topProgressLabel: {
+    fontSize: 9,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.textSecondary,
+    letterSpacing: 1.2,
   },
   voiceToggle: {
     width: 36,
@@ -788,55 +810,60 @@ const styles = StyleSheet.create({
   // Bottom Navigation
   bottomNav: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     paddingBottom: Platform.OS === 'web' ? spacing.md : spacing.lg + 8,
-    backgroundColor: colors.surfaceContainerLowest,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
+    backgroundColor: 'transparent',
     ...(isWeb ? { maxWidth: 700, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),
-  },
-  navBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
   },
   navBtnDisabled: {
     opacity: 0.35,
   },
   prevBtn: {
-    backgroundColor: colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: colors.outlineVariant,
-  },
-  navBtnText: {
-    fontSize: fontSize.md,
-    fontFamily: fonts.headingBold,
-    color: colors.text,
-  },
-  navBtnTextDisabled: {
-    color: colors.textMuted,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.surfaceContainerHigh,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   nextBtn: {
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 56,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 28,
+    backgroundColor: colors.primaryContainer,
+    shadowColor: colors.primaryContainer,
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
   },
   nextBtnText: {
     fontSize: fontSize.md,
-    fontFamily: fonts.headingBold,
-    color: colors.onPrimary,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.onPrimaryContainer,
+    letterSpacing: 1.5,
   },
   completeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    height: 56,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 28,
     backgroundColor: colors.secondary,
   },
   completeBtnText: {
     fontSize: fontSize.md,
     fontFamily: fonts.headingExtraBold,
     color: '#fff',
+    letterSpacing: 1.5,
   },
 });
 

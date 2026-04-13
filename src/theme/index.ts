@@ -1,7 +1,7 @@
 // ChefMate Design System — Material Design 3
 // Based on "The Culinary Editorial" mockups
 
-export const colors = {
+export const lightColors = {
   // M3 Primary (Turuncu — marka rengi)
   primary: '#E66B3D',
   primaryContainer: '#FFE0D4',
@@ -105,14 +105,14 @@ export const fonts = {
   bodySemiBold: 'Manrope-SemiBold',
 };
 
-// Dark mode colors
-export const darkColors = {
-  primary: '#FFB59B',
-  primaryContainer: '#812B00',
+// Default export = dark theme (Culinary Editorial mockups)
+export const colors = {
+  primary: '#FFB59C',
+  primaryContainer: '#E76C3E',
   onPrimary: '#4E1600',
   onPrimaryContainer: '#FFE0D4',
-  primaryLight: '#812B00',
-  primaryDark: '#FFB59B',
+  primaryLight: '#E76C3E',
+  primaryDark: '#FFB59C',
   primaryDim: '#FF8B65',
 
   secondary: '#D7F881',
@@ -125,15 +125,15 @@ export const darkColors = {
   tertiary: '#E0C535',
   tertiaryContainer: '#4E4300',
 
-  background: '#1A1C18',
-  surface: '#1A1C18',
-  surfaceContainerLowest: '#111210',
-  surfaceContainerLow: '#222420',
-  surfaceContainer: '#2A2C28',
-  surfaceContainerHigh: '#343632',
-  surfaceContainerHighest: '#3F413C',
-  surfaceDim: '#1A1C18',
-  card: '#2A2C28',
+  background: '#131313',
+  surface: '#131313',
+  surfaceContainerLowest: '#0E0E0E',
+  surfaceContainerLow: '#1C1B1B',
+  surfaceContainer: '#232222',
+  surfaceContainerHigh: '#2B2A2A',
+  surfaceContainerHighest: '#343333',
+  surfaceDim: '#131313',
+  card: '#1C1B1B',
 
   text: '#E1DCD4',
   textSecondary: '#A09C96',
@@ -158,3 +158,6 @@ export const darkColors = {
   inverseSurface: '#E1DCD4',
   inversePrimary: '#C45A2F',
 };
+
+export const darkColors = colors;
+

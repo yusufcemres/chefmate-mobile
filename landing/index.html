@@ -1379,9 +1379,9 @@
     <div class="container nav-inner">
       <div class="logo">ChefMate</div>
       <ul class="nav-links">
-        <li><a href="#ozellikler">&#214;zellikler</a></li>
+        <li><a href="#ozellikler">Nasıl Çalışır</a></li>
+        <li><a href="#deger">Özellikler</a></li>
         <li><a href="#ai">AI Asistan</a></li>
-        <li><a href="#nasil">Nasıl &#199;alışır</a></li>
         <li><a href="#kesfet">Keşfet</a></li>
       </ul>
       <a href="#indir" class="nav-cta">
@@ -1396,9 +1396,9 @@
 
   <!-- Mobile Menu -->
   <div class="mobile-menu" id="mobileMenu">
-    <a href="#ozellikler" onclick="closeMobile()">&#214;zellikler</a>
+    <a href="#ozellikler" onclick="closeMobile()">Nasıl Çalışır</a>
+    <a href="#deger" onclick="closeMobile()">Özellikler</a>
     <a href="#ai" onclick="closeMobile()">AI Asistan</a>
-    <a href="#nasil" onclick="closeMobile()">Nasıl &#199;alışır</a>
     <a href="#kesfet" onclick="closeMobile()">Keşfet</a>
     <a href="#sss" onclick="closeMobile()">SSS</a>
     <a href="#indir" class="mobile-cta" onclick="closeMobile()">
@@ -1412,16 +1412,16 @@
     <div class="container">
       <div class="hero-badge fade-up">
         <span class="material-symbols-outlined filled" style="font-size:16px">auto_awesome</span>
-        AI Destekli Mutfak Asistanı
+        AI Destekli Mutfak Yöneticisi
       </div>
 
       <h1 class="fade-up d1">
-        Mutfağında Ne Varsa,<br/>
-        <em>Onunla Pişir.</em>
+        Fotoğrafla,<br/>
+        <em>AI Pişirsin.</em>
       </h1>
 
       <p class="hero-desc fade-up d2">
-        Stokundaki malzemeleri tara, AI ile kişisel tarif önerileri al, yemek planları oluştur ve alışveriş listeni otomatik yönet.
+        Buzdolabını çek → AI malzemeleri tanısın → stoğuna uygun tarifleri bulsun → kişiselleştirsin → adım adım pişir. Hepsi tek uygulamada.
       </p>
 
       <div class="hero-actions fade-up d3">
@@ -1456,124 +1456,92 @@
     </div>
   </section>
 
-  <!-- ═══════════════ FEATURES ═══════════════ -->
-  <section class="features-section" id="ozellikler">
+  <!-- ═══════════════ AKIŞ: Nasıl Çalışır (Hero'nun hemen altı) ═══════════════ -->
+  <section class="how-section" id="ozellikler" style="padding-top:60px;padding-bottom:80px;">
     <div class="container">
       <div class="section-header">
         <div class="section-label">
-          <span class="material-symbols-outlined" style="font-size:16px">dashboard</span>
-          &#214;zellikler
+          <span class="material-symbols-outlined" style="font-size:16px">route</span>
+          Nasıl Çalışır
         </div>
-        <h2 class="section-title">Tek Uygulama, Tüm Mutfak</h2>
-        <p class="section-desc">Stok takibinden tarif keşiflere, yemek planlarından alışveriş listesine kadar her şey tek yerde.</p>
+        <h2 class="section-title">Fotoğraftan Sofraya, 4 Adım</h2>
+        <p class="section-desc">Diğer tarif uygulamaları sana tarifleri listeler. ChefMate, mutfağını baştan sona yönetir.</p>
       </div>
 
-      <div class="features-grid">
-        <div class="feature-card">
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Fotoğrafla</h3>
+          <p>Buzdolabını çek. AI tüm malzemeleri saniyeler içinde tanır ve stoğuna ekler.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>Eşleştir</h3>
+          <p>1000+ tarif arasından stoğuna %98 uyumlu olanları otomatik bulur. Hiç malzeme israf etme.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>Kişiselleştir</h3>
+          <p>AI ile tarifi sağlıklı, vegan, bütçe dostu veya daha hızlı versiyonuna dönüştür. 7 AI modu.</p>
+        </div>
+
+        <div class="step-card">
+          <div class="step-number">4</div>
+          <h3>Pişir & Takip Et</h3>
+          <p>Adım adım pişirme moduyla yap. Kullandığın malzemeler otomatik stoktan düşülür, alışveriş listesi güncellenir.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 3 ANA DEĞER BLOĞU ═══════════════ -->
+  <section class="features-section" id="deger">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-label">
+          <span class="material-symbols-outlined" style="font-size:16px">diamond</span>
+          Fark Yaratan Özellikler
+        </div>
+        <h2 class="section-title">Tarif Sitesi Değil, Mutfak Yöneticisi</h2>
+        <p class="section-desc">ChefMate sadece tarif göstermez — stok takibinden alışverişe, kalori hesabından diyet filtresine kadar mutfağının tüm döngüsünü yönetir.</p>
+      </div>
+
+      <div class="features-grid" style="grid-template-columns: repeat(3, 1fr);">
+        <div class="feature-card" style="border-left: 3px solid var(--primary);">
           <div class="feature-icon orange">
             <span class="material-symbols-outlined" style="font-size:28px">photo_camera</span>
           </div>
-          <h3>AI ile Stok Tarama</h3>
-          <p>Buzdolabını fotoğrafla, AI malzemelerini otomatik tanır ve stoğuna ekler. Manuel giriş yok, hata yok.</p>
+          <h3>AI Stok Tarama</h3>
+          <p>Buzdolabını fotoğrafla → AI malzemeleri tanır → stoğuna otomatik ekler. SKT yaklaşınca uyarı alırsın, israf biter.</p>
           <div class="feature-tag">
             <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            Gemini 2.0 Flash
+            Yapay Zeka
           </div>
         </div>
 
-        <div class="feature-card">
+        <div class="feature-card" style="border-left: 3px solid var(--secondary);">
           <div class="feature-icon green">
-            <span class="material-symbols-outlined" style="font-size:28px">restaurant_menu</span>
-          </div>
-          <h3>Akıllı Tarif Eşleştirme</h3>
-          <p>Stokundaki malzemelere göre en uyumlu tarifleri bulur. %98'e varan eşleştirme oranı ile hiç malzeme israf etme.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">percent</span>
-            Uyum Skoru
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon orange">
-            <span class="material-symbols-outlined" style="font-size:28px">auto_awesome</span>
-          </div>
-          <h3>AI Tarif Kişiselleştirme</h3>
-          <p>Herhangi bir tarifi daha sağlıklı, vegan, bütçe dostu veya farklı bir mutfağa uyarla. 7 farklı AI modu.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">tune</span>
-            7 Mod
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon green">
-            <span class="material-symbols-outlined" style="font-size:28px">kitchen</span>
-          </div>
-          <h3>Stok Yönetimi</h3>
-          <p>Tüm malzemelerini takip et, son kullanma tarihi yaklaşınca bildirim al. İsraf azalır, tasarruf artar.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">notifications_active</span>
-            SKT Uyarıları
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon gold">
             <span class="material-symbols-outlined" style="font-size:28px">calendar_month</span>
           </div>
-          <h3>Yemek Planlama</h3>
-          <p>Haftalık yemek planları oluştur, tarifleri günlere dağıt. Organize ol, her gün ne yiyeceğini bil.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">event_available</span>
-            Haftalık Plan
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon orange">
-            <span class="material-symbols-outlined" style="font-size:28px">shopping_cart</span>
-          </div>
-          <h3>Otomatik Alışveriş Listesi</h3>
-          <p>Tarif seç, eksik malzemeleri tek tuşla listeye ekle. Stokundakiler otomatik düşülür.</p>
+          <h3>Plan & Alışveriş</h3>
+          <p>Haftalık yemek planı oluştur, tarifleri günlere dağıt. Eksik malzemeler tek tuşla alışveriş listesine — stokundakiler otomatik düşülür.</p>
           <div class="feature-tag">
             <span class="material-symbols-outlined" style="font-size:14px">playlist_add_check</span>
-            Tek Tuşla Ekle
+            Otomatik Liste
           </div>
         </div>
 
-        <div class="feature-card">
-          <div class="feature-icon orange">
-            <span class="material-symbols-outlined" style="font-size:28px">local_fire_department</span>
+        <div class="feature-card" style="border-left: 3px solid var(--tertiary);">
+          <div class="feature-icon gold">
+            <span class="material-symbols-outlined" style="font-size:28px">shield</span>
           </div>
-          <h3>Kalori &amp; Besin Takibi</h3>
-          <p>Her tarifin porsiyon başına kalori, protein, karbonhidrat, yağ ve lif değerlerini anlık gör. Sağlıklı beslenme hedeflerini takip et.</p>
+          <h3>Sağlık & Diyet</h3>
+          <p>Kalori, protein, karbonhidrat takibi. Glutensiz, laktozsuz, vegan, keto filtreleri. AI alerjenlerini dikkate alarak kişisel menü oluşturur.</p>
           <div class="feature-tag">
             <span class="material-symbols-outlined" style="font-size:14px">monitoring</span>
-            Makro Takibi
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon green">
-            <span class="material-symbols-outlined" style="font-size:28px">no_food</span>
-          </div>
-          <h3>Diyet &amp; Alerjen Filtre</h3>
-          <p>Glutensiz, laktozsuz, vegan, keto — beslenme profilini tanımla. Uygun olmayan tarifler ve malzemeler otomatik filtrelenir.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">shield</span>
-            Güvenli Beslenme
-          </div>
-        </div>
-
-        <div class="feature-card">
-          <div class="feature-icon gold">
-            <span class="material-symbols-outlined" style="font-size:28px">restaurant</span>
-          </div>
-          <h3>Diyetine Uygun Öğün Önerileri</h3>
-          <p>Beslenme tercihlerine göre kahvaltı, öğle ve akşam önerileri al. AI, kalori hedefini ve alerjenlerini dikkate alarak kişisel menü oluşturur.</p>
-          <div class="feature-tag">
-            <span class="material-symbols-outlined" style="font-size:14px">auto_awesome</span>
-            Kişisel Menü
+            Makro + Alerjen
           </div>
         </div>
       </div>
@@ -1766,43 +1734,7 @@
   </section>
 
   <!-- ═══════════════ HOW IT WORKS ═══════════════ -->
-  <section class="how-section" id="nasil">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-label">
-          <span class="material-symbols-outlined" style="font-size:16px">route</span>
-          Nasıl &#199;alışır
-        </div>
-        <h2 class="section-title">4 Adımda Mutfak Yönetimi</h2>
-      </div>
-
-      <div class="steps-grid">
-        <div class="step-card">
-          <div class="step-number">1</div>
-          <h3>Tara &amp; Ekle</h3>
-          <p>Buzdolabını fotoğrafla veya barkod tara. AI malzemeleri tanır, stoğuna otomatik ekler.</p>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">2</div>
-          <h3>Keşfet &amp; Seç</h3>
-          <p>Stokundaki malzemelere göre en uyumlu tarifleri gör. Filtreleri kullanarak ideal yemeği bul.</p>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">3</div>
-          <h3>Kişiselleştir</h3>
-          <p>AI ile tarifi ihtiyacına göre dönüştür. Sağlıklı, vegan, hızlı veya bütçe dostu versiyonunu oluştur.</p>
-        </div>
-
-        <div class="step-card">
-          <div class="step-number">4</div>
-          <h3>Pişir &amp; Takip Et</h3>
-          <p>Adım adım pişirme moduyla yemeğini yap. Kullanılan malzemeler otomatik stoktan düşülür.</p>
-        </div>
-      </div>
-    </div>
-  </section>
+  <!-- Nasıl Çalışır section yukarı taşındı (hero altına) -->
 
   <!-- ═══════════════ BENTO HIGHLIGHTS ═══════════════ -->
   <section id="kesfet">
@@ -1960,11 +1892,11 @@
 
         <div class="faq-item">
           <button class="faq-question" onclick="toggleFaq(this)">
-            Hangi yapay zeka modeli kullanılıyor?
+            Hangi yapay zeka teknolojisi kullanılıyor?
             <span class="material-symbols-outlined">expand_more</span>
           </button>
           <div class="faq-answer">
-            <div class="faq-answer-inner">Stok tarama için Gemini 2.0 Flash ve GPT-4o kullanıyoruz. Tarif kişiselleştirme de aynı modelleri kullanan akıllı bir fallback sistemiyle çalışır. Her zaman en güncel AI teknolojisi.</div>
+            <div class="faq-answer-inner">En güncel yapay zeka teknolojilerini kullanıyoruz. Stok tarama, tarif eşleştirme ve kişiselleştirme — hepsi sürekli güncellenen AI altyapımızla çalışır.</div>
           </div>
         </div>
 
@@ -2034,7 +1966,7 @@
           </div>
         </a>
 
-        <a href="https://chefmate-sand.vercel.app" class="store-btn highlight">
+        <a href="https://chefmate-web-five.vercel.app" class="store-btn highlight">
           <span class="material-symbols-outlined" style="font-size:28px">language</span>
           <div>
             <span class="label-sm">Web Uygulaması</span>
@@ -2051,15 +1983,15 @@
       <div class="footer-inner">
         <div class="footer-brand">
           <div class="logo">ChefMate</div>
-          <p>Mutfağının dijital asistanı. AI destekli tarif önerileri, akıllı stok yönetimi ve daha fazlası.</p>
+          <p>Tarif sitesi değil, mutfak yöneticisi. Fotoğrafla stok tara, AI ile tarif bul, kişiselleştir, pişir.</p>
         </div>
 
         <div class="footer-links">
           <h4>&#220;rün</h4>
           <ul>
-            <li><a href="#ozellikler">&#214;zellikler</a></li>
+            <li><a href="#ozellikler">Nasıl Çalışır</a></li>
+            <li><a href="#deger">Özellikler</a></li>
             <li><a href="#ai">AI Asistan</a></li>
-            <li><a href="#nasil">Nasıl &#199;alışır</a></li>
             <li><a href="#indir">İndir</a></li>
           </ul>
         </div>

@@ -231,7 +231,8 @@ function RecipeDetailScreen() {
             </View>
           )}
           <LinearGradient
-            colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+            colors={['transparent', 'rgba(19,19,19,0.6)', colors.background]}
+            locations={[0, 0.55, 1]}
             style={styles.heroGradient}
           />
           {/* Back button */}
@@ -461,7 +462,7 @@ function RecipeDetailScreen() {
               <View key={step.id} style={styles.stepCard}>
                 {/* Big step number (editorial style) */}
                 <View style={styles.stepNumberBg}>
-                  <Text style={styles.stepNumberBig}>{step.stepNumber ?? step.stepOrder ?? idx + 1}</Text>
+                  <Text style={styles.stepNumberBig}>{String(step.stepNumber ?? step.stepOrder ?? idx + 1).padStart(2, '0')}</Text>
                 </View>
                 <View style={styles.stepContent}>
                   <Text style={styles.stepInstruction}>{step.instruction}</Text>
@@ -608,7 +609,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '70%' as any,
+    height: '85%' as any,
   },
   heroBackBtn: {
     position: 'absolute',
@@ -643,17 +644,19 @@ const styles = StyleSheet.create({
     right: 16,
   },
   heroCategoryBadge: {
-    backgroundColor: 'rgba(230,107,61,0.9)',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: borderRadius.full,
+    backgroundColor: colors.primaryContainer,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
     alignSelf: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 10,
   },
   heroCategoryText: {
-    fontSize: fontSize.xs,
-    fontFamily: 'Jakarta-SemiBold',
+    fontSize: 10,
+    fontFamily: 'Jakarta-ExtraBold',
     color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
   },
   heroCuisineBadge: {
     backgroundColor: 'rgba(255,255,255,0.85)',
@@ -669,10 +672,11 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   heroTitle: {
-    fontSize: fontSize.xxl,
+    fontSize: 34,
     fontFamily: 'Jakarta-ExtraBold',
     color: '#fff',
-    letterSpacing: -0.5,
+    letterSpacing: -1,
+    lineHeight: 38,
   },
   heroRating: {
     fontSize: fontSize.md,
@@ -836,24 +840,23 @@ const styles = StyleSheet.create({
   stepCard: {
     flexDirection: 'row',
     gap: spacing.md,
-    backgroundColor: colors.surfaceContainerLowest,
+    backgroundColor: colors.surfaceContainerLow,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.surfaceContainerHigh + '50',
+    alignItems: 'flex-start',
   },
   stepNumberBg: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primaryContainer,
-    justifyContent: 'center',
+    width: 56,
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   stepNumberBig: {
-    fontSize: 24,
+    fontSize: 44,
     fontFamily: 'Jakarta-ExtraBold',
     color: colors.primary,
+    opacity: 0.25,
+    letterSpacing: -1,
+    lineHeight: 44,
   },
   stepContent: { flex: 1 },
   stepInstruction: { fontSize: fontSize.md, fontFamily: 'Manrope-Regular', color: colors.text, lineHeight: 22 },
@@ -968,7 +971,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  cookBtnText: { color: colors.onPrimary, fontFamily: 'Jakarta-ExtraBold', fontSize: fontSize.lg },
+  cookBtnText: { color: colors.onPrimary, fontFamily: 'Jakarta-ExtraBold', fontSize: fontSize.md, textTransform: 'uppercase', letterSpacing: 1.5 },
 });
 
 export default withScreenErrorBoundary(RecipeDetailScreen, 'Tarif Detayı');

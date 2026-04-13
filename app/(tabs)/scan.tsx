@@ -670,7 +670,7 @@ export default function ScanScreen() {
             <Text style={styles.secondaryBtnText}>Yeni Fotoğraf</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
     </ScrollView>
   );
 }

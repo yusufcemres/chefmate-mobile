@@ -1,10 +1,14 @@
 import { useEffect, useCallback, useState } from 'react';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import * as Notifications from 'expo-notifications';
+import { Platform } from 'react-native';
+let Notifications: any = null;
+if (Platform.OS !== 'web') {
+  Notifications = require('expo-notifications');
+}
 import {
   PlusJakartaSans_500Medium,
   PlusJakartaSans_600SemiBold,
@@ -22,7 +26,9 @@ import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { useOfflineCacheStore } from '../src/stores/offline-cache';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+if (Platform.OS !== 'web') {
+  SplashScreen.preventAutoHideAsync().catch(() => {});
+}
 
 export default function RootLayout() {
   const init = useAuthStore((s) => s.init);
@@ -75,7 +81,8 @@ function ThemedApp({ fontsLoaded, onLayoutReady }: { fontsLoaded: boolean; onLay
   const { isDark, colors: c } = useTheme();
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+    if (Platform.OS === 'web' || !Notifications) return;
+    const subscription = Notifications.addNotificationResponseReceivedListener((response: any) => {
       const data = response.notification.request.content.data;
       if (data?.type === 'expiry_alert' || data?.type === 'expiry_warning') {
         router.push('/notifications');

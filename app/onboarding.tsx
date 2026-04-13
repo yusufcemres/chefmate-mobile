@@ -309,11 +309,11 @@ const s = StyleSheet.create({
   },
   progressBar: {
     flex: 1,
-    height: 4,
-    borderRadius: 2,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: colors.surfaceContainerHigh,
   },
-  progressBarActive: { backgroundColor: colors.primary },
+  progressBarActive: { backgroundColor: colors.primaryContainer },
 
   // Steps
   stepCenter: { alignItems: 'center', paddingTop: spacing.md },
@@ -329,12 +329,12 @@ const s = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   heroTitle: {
-    fontSize: fontSize.title,
+    fontSize: 44,
     fontFamily: fonts.headingExtraBold,
     color: colors.text,
     textAlign: 'center',
-    lineHeight: 40,
-    letterSpacing: -1,
+    lineHeight: 48,
+    letterSpacing: -1.5,
   },
   heroDesc: {
     fontSize: fontSize.sm,
@@ -348,14 +348,14 @@ const s = StyleSheet.create({
 
   // Section labels
   sectionLabel: {
-    fontSize: fontSize.sm,
-    fontFamily: fonts.headingBold,
-    color: colors.text,
+    fontSize: 12,
+    fontFamily: fonts.headingExtraBold,
+    color: colors.primaryContainer,
     alignSelf: 'flex-start',
     marginBottom: spacing.sm,
-    marginTop: spacing.md,
+    marginTop: spacing.lg,
     textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
+    letterSpacing: 1.5,
   },
 
   // Step headers
