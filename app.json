@@ -29,10 +29,12 @@
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
+    "owner": "sololabs",
     "extra": {
       "eas": {
-        "projectId": "chefmate-mobile"
-      }
+        "projectId": "aaabe5b3-03fa-4030-980e-becbf76d3e18"
+      },
+      "router": {}
     },
     "plugins": [
       "expo-router",

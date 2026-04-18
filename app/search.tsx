@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import {
 import { router, Stack } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '../src/api/client';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../src/theme';
+import { useTheme } from '../src/theme/ThemeContext';
 import { hapticSelection } from '../src/utils/haptics';
 
 interface Tag { id: string; name: string; slug: string; type: string; emoji?: string }
@@ -49,6 +50,8 @@ const DIFFICULTY_OPTIONS = [
 ];
 
 export default function SearchScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [categories, setCategories] = useState<Tag[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -332,7 +335,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.background },
   topBar: {
     flexDirection: 'row',

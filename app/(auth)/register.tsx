@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,12 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 
 export default function RegisterScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,7 +105,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   inner: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
   logo: { fontSize: fontSize.title, fontWeight: '800', color: colors.primary, textAlign: 'center' },

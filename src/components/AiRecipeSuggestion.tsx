@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '../api/client';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 import type { AiSuggestionResult } from '../types';
 
 interface Props {
@@ -34,6 +35,8 @@ const CUISINE_OPTIONS = [
 ];
 
 export default function AiRecipeSuggestion({ recipeId }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [showCuisines, setShowCuisines] = useState(false);
@@ -373,7 +376,7 @@ export default function AiRecipeSuggestion({ recipeId }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     marginBottom: spacing.sm,

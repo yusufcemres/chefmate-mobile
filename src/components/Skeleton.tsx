@@ -1,9 +1,11 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { View, Animated, StyleSheet, ViewStyle } from 'react-native';
-import { colors, spacing, borderRadius } from '../theme';
+import { spacing, borderRadius, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 // Shimmer animation skeleton component
 function SkeletonBlock({ style }: { style?: ViewStyle | ViewStyle[] }) {
+  const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0.3)).current;
 
   useEffect(() => {
@@ -29,6 +31,8 @@ function SkeletonBlock({ style }: { style?: ViewStyle | ViewStyle[] }) {
 
 // Recipe card skeleton
 export function RecipeCardSkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={s.card}>
       <SkeletonBlock style={s.cardImage} />
@@ -47,6 +51,8 @@ export function RecipeCardSkeleton() {
 
 // Circular category skeleton
 export function CategorySkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={s.catRow}>
       {Array.from({ length: 6 }).map((_, i) => (
@@ -61,6 +67,8 @@ export function CategorySkeleton() {
 
 // Cuisine chip skeleton
 export function CuisineChipSkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={s.chipRow}>
       {Array.from({ length: 5 }).map((_, i) => (
@@ -72,11 +80,15 @@ export function CuisineChipSkeleton() {
 
 // Section title skeleton
 function SectionTitleSkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return <SkeletonBlock style={s.sectionTitle} />;
 }
 
 // Horizontal card row skeleton
 function HorizontalCardsSkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={s.hRow}>
       {Array.from({ length: 3 }).map((_, i) => (
@@ -92,6 +104,8 @@ function HorizontalCardsSkeleton() {
 
 // Full home page skeleton
 export function HomePageSkeleton() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={s.container}>
       {/* Header skeleton */}
@@ -141,7 +155,7 @@ export function HomePageSkeleton() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, type PropsWithChildren } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors as lightColors, darkColors } from './index';
+import { lightColors, darkColors } from './index';
 
 type ThemeMode = 'light' | 'dark' | 'system';
 

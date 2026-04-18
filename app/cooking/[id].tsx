@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -15,9 +15,11 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 import { hapticMedium, hapticSuccess, hapticSelection } from '../../src/utils/haptics';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -43,8 +45,11 @@ interface CookingData {
 }
 
 function CookingModeScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const user = useAuthStore((s) => s.user);
+  const insets = useSafeAreaInsets();
   const [data, setData] = useState<CookingData | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [timer, setTimer] = useState<number | null>(null);
@@ -413,7 +418,7 @@ function CookingModeScreen() {
       </View>
 
       {/* ===== Bottom Navigation ===== */}
-      <View style={styles.bottomNav}>
+      <View style={[styles.bottomNav, { paddingBottom: (Platform.OS === 'web' ? spacing.md : spacing.lg + 8) + insets.bottom }]}>
         <TouchableOpacity
           style={[styles.prevBtn, isFirst && styles.navBtnDisabled]}
           onPress={() => goToStep(currentStep - 1)}
@@ -450,7 +455,7 @@ function CookingModeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

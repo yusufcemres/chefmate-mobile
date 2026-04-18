@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
+import { useEffect, useState, useMemo } from 'react';
+import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
   Text,
@@ -21,7 +21,8 @@ import { useShoppingStore } from '../../src/stores/shopping';
 import { useMealPlanStore } from '../../src/stores/meal-plans';
 import { useFavoritesStore } from '../../src/stores/favorites';
 import { useOfflineCacheStore } from '../../src/stores/offline-cache';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 import { hapticSelection } from '../../src/utils/haptics';
 import type { Recipe, MealPlan } from '../../src/types';
 import AiRecipeSuggestion from '../../src/components/AiRecipeSuggestion';
@@ -39,7 +40,10 @@ interface NutritionInfo {
 }
 
 const difficultyLabel: Record<string, string> = { EASY: 'Kolay', MEDIUM: 'Orta', HARD: 'Zor', easy: 'Kolay', medium: 'Orta', hard: 'Zor' };
-const difficultyColor: Record<string, string> = { EASY: colors.easy, MEDIUM: colors.medium, HARD: colors.hard, easy: colors.easy, medium: colors.medium, hard: colors.hard };
+const getDifficultyColor = (colors: ThemeColors, diff: string): string => {
+  const map: Record<string, string> = { EASY: colors.easy, MEDIUM: colors.medium, HARD: colors.hard, easy: colors.easy, medium: colors.medium, hard: colors.hard };
+  return map[diff] || colors.textMuted;
+};
 const roleLabel: Record<string, string> = { MAIN: 'Ana', SEASONING: 'Baharat', OPTIONAL: 'Opsiyonel', main: 'Ana', seasoning: 'Baharat', optional: 'Opsiyonel' };
 
 const isWeb = Platform.OS === 'web';
@@ -50,6 +54,8 @@ function getCuisineTag(recipe: any) { return getRecipeTags(recipe).find((t: any)
 function getCategoryTag(recipe: any) { return getRecipeTags(recipe).find((t: any) => t.type === 'CATEGORY'); }
 
 function RecipeDetailScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
@@ -294,7 +300,7 @@ function RecipeDetailScreen() {
           </View>
           <View style={styles.floatingDivider} />
           <View style={styles.floatingItem}>
-            <Text style={[styles.floatingValue, { color: difficultyColor[recipe.difficulty] }]}>
+            <Text style={[styles.floatingValue, { color: getDifficultyColor(colors, recipe.difficulty) }]}>
               {difficultyLabel[recipe.difficulty] || recipe.difficulty}
             </Text>
             <Text style={styles.floatingLabel}>ZORLUK</Text>
@@ -578,7 +584,7 @@ function RecipeDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: {
     ...(isWeb ? { maxWidth: 800, marginHorizontal: 'auto' as any, width: '100%' as any } : {}),

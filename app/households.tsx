@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,10 +13,13 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { api } from '../src/api/client';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../src/theme';
+import { useTheme } from '../src/theme/ThemeContext';
 import type { Household, InventoryItem } from '../src/types';
 
 export default function HouseholdsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'detail' | 'inventory'>('list');
@@ -278,7 +281,7 @@ export default function HouseholdsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: spacing.md, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
   headerTitle: { fontSize: fontSize.lg, fontWeight: '700', color: colors.text, flex: 1, textAlign: 'center' },

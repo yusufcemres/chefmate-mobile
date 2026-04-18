@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../src/theme';
+import { useTheme } from '../src/theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
@@ -47,6 +48,8 @@ const allergenOptions = [
 const TOTAL_STEPS = 2;
 
 export default function OnboardingScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const { updatePreferences } = useAuthStore();
   const [step, setStep] = useState(0);
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
@@ -289,7 +292,7 @@ export default function OnboardingScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scrollContent: {
     flexGrow: 1,

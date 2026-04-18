@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,11 +14,11 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import { useInventoryStore } from '../../src/stores/inventory';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 
 interface DetectedItem {
   name: string;
@@ -49,6 +49,8 @@ interface BarcodeResult {
 }
 
 export default function ScanScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const [scanMode, setScanMode] = useState<'ai' | 'barcode'>('ai');
 
@@ -134,26 +136,18 @@ export default function ScanScreen() {
   };
 
   const getBase64 = async (uri: string): Promise<string> => {
-    if (Platform.OS === 'web') {
-      // Web: fetch blob and convert
-      const res = await fetch(uri);
-      const blob = await res.blob();
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Remove data:image/...;base64, prefix
-          resolve(result.split(',')[1] || result);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-    }
-    // Native: use FileSystem
-    const base64 = await FileSystem.readAsStringAsync(uri, {
-      encoding: FileSystem.EncodingType.Base64,
+    // Works on web and native: fetch the local URI, convert blob → base64
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1] || result);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
     });
-    return base64;
   };
 
   const addMorePhoto = async () => {
@@ -675,7 +669,7 @@ export default function ScanScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { flexGrow: 1 },
   pickSection: {

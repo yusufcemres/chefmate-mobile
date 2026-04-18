@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
@@ -19,7 +19,8 @@ import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useMealPlanStore } from '../src/stores/meal-plans';
 import { api } from '../src/api/client';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../src/theme';
+import { useTheme } from '../src/theme/ThemeContext';
 import type { MealPlan, MealPlanItem } from '../src/types';
 
 const MEAL_TYPE_LABELS: Record<string, string> = {
@@ -59,6 +60,8 @@ function getDateRange(days: number): { start: string; end: string } {
 }
 
 function MealPlansScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { plans, currentPlan, loading, fetchPlans, fetchPlan, createPlan, toggleCooked, removeItem, deletePlan, generateShoppingList } = useMealPlanStore();
 
   const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
@@ -75,6 +78,7 @@ function MealPlansScreen() {
   const [aiMeals, setAiMeals] = useState<string[]>(['BREAKFAST', 'LUNCH', 'DINNER']);
   const [aiPreferences, setAiPreferences] = useState('');
   const [aiUseInventory, setAiUseInventory] = useState(true);
+  const [detailMode, setDetailMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     fetchPlans();
@@ -406,7 +410,6 @@ function MealPlansScreen() {
   }
 
   // ===== DETAIL VIEW =====
-  const [detailMode, setDetailMode] = useState<'grid' | 'list'>('grid');
   const byDate = currentPlan?.byDate || {};
   const sortedDates = Object.keys(byDate).sort();
 
@@ -598,7 +601,7 @@ function MealPlansScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   // Header

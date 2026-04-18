@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { api } from '../api/client';
 import { useAuthStore } from '../stores/auth';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 interface Review {
   id: string;
@@ -35,6 +36,8 @@ interface Props {
 const isWeb = Platform.OS === 'web';
 
 export default function RecipeReviews({ recipeId, ratingAvg, ratingCount }: Props) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(false);
@@ -264,7 +267,7 @@ export default function RecipeReviews({ recipeId, ratingAvg, ratingCount }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     marginTop: spacing.lg,
     backgroundColor: colors.surfaceContainerLowest,

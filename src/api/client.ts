@@ -8,10 +8,8 @@ const PROD_API = 'https://chefmate-api-production.up.railway.app/api/v1';
 const getBaseUrl = () => {
   if (Platform.OS === 'web') return PROD_API;
   if (!__DEV__) return PROD_API;
-  // Expo dev: use debuggerHost (auto-detected from Metro)
-  const debuggerHost = Constants.expoConfig?.hostUri?.split(':')[0];
-  const devHost = debuggerHost || 'localhost';
-  return `http://${devHost}:3000/api/v1`;
+  // DEV: use Railway production (no local API running)
+  return PROD_API;
 };
 
 const API_BASE = getBaseUrl();
@@ -101,7 +99,12 @@ class ApiClient {
   private async parseError(res: Response): Promise<Error> {
     try {
       const data = await res.json();
-      return new Error(data.message || data.error || `Hata: ${res.status}`);
+      const msg =
+        data?.error?.message ||
+        (typeof data?.error === 'string' ? data.error : null) ||
+        data?.message ||
+        `Hata: ${res.status}`;
+      return new Error(msg);
     } catch {
       return new Error(`Hata: ${res.status}`);
     }

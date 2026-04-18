@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,12 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius } from '../../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 
 export default function LoginScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,10 +31,11 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim().toLowerCase(), password);
       router.replace('/(tabs)');
     } catch (err: any) {
-      setError(err.message || 'Bir hata oluştu.');
+      const msg = err?.message || 'Bir hata oluştu.';
+      setError(msg === 'Invalid email or password' ? 'E-posta veya şifre hatalı.' : msg);
     } finally {
       setLoading(false);
     }
@@ -54,6 +58,9 @@ export default function LoginScreen() {
             placeholderTextColor={colors.textMuted}
             keyboardType="email-address"
             autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
             value={email}
             onChangeText={setEmail}
           />
@@ -62,6 +69,10 @@ export default function LoginScreen() {
             placeholder="Şifre"
             placeholderTextColor={colors.textMuted}
             secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="password"
+            textContentType="password"
             value={password}
             onChangeText={setPassword}
           />
@@ -90,7 +101,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

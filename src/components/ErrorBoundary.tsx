@@ -1,6 +1,6 @@
 import React, { Component, type PropsWithChildren } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { colors } from '../theme';
+import { darkColors as colors } from '../theme';
 
 interface State {
   hasError: boolean;

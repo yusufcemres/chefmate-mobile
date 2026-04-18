@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { api } from '../api/client';
-import { colors, spacing, fontSize, borderRadius } from '../theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 interface Badge {
   id: string;
@@ -22,15 +23,20 @@ const categoryLabel: Record<string, string> = {
   social: 'Sosyal',
 };
 
-const categoryColor: Record<string, string> = {
-  cooking: colors.primary,
-  exploration: '#6C63FF',
-  health: colors.secondary,
-  speed: '#F5A623',
-  social: '#FF6B9D',
+const getCategoryColor = (colors: ThemeColors, cat: string): string => {
+  const map: Record<string, string> = {
+    cooking: colors.primary,
+    exploration: '#6C63FF',
+    health: colors.secondary,
+    speed: '#F5A623',
+    social: '#FF6B9D',
+  };
+  return map[cat] || colors.primary;
 };
 
 export default function BadgeDisplay() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [allBadges, setAllBadges] = useState<Badge[]>([]);
   const [earnedBadges, setEarnedBadges] = useState<Badge[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +98,7 @@ export default function BadgeDisplay() {
               <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={1}>
                 {item.name}
               </Text>
-              {earned && <View style={[styles.earnedDot, { backgroundColor: categoryColor[item.category] || colors.primary }]} />}
+              {earned && <View style={[styles.earnedDot, { backgroundColor: getCategoryColor(colors, item.category) }]} />}
               {!earned && <Text style={styles.lockedIcon}>🔒</Text>}
             </TouchableOpacity>
           );
@@ -106,8 +112,8 @@ export default function BadgeDisplay() {
             <Text style={styles.detailName}>{selectedBadge.name}</Text>
             <Text style={styles.detailDesc}>{selectedBadge.description}</Text>
             <View style={styles.detailMeta}>
-              <View style={[styles.categoryPill, { backgroundColor: (categoryColor[selectedBadge.category] || colors.primary) + '20' }]}>
-                <Text style={[styles.categoryText, { color: categoryColor[selectedBadge.category] || colors.primary }]}>
+              <View style={[styles.categoryPill, { backgroundColor: (getCategoryColor(colors, selectedBadge.category)) + '20' }]}>
+                <Text style={[styles.categoryText, { color: getCategoryColor(colors, selectedBadge.category) }]}>
                   {categoryLabel[selectedBadge.category] || selectedBadge.category}
                 </Text>
               </View>
@@ -122,7 +128,7 @@ export default function BadgeDisplay() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { marginTop: spacing.md },
   loadingContainer: { padding: spacing.lg, alignItems: 'center' },
   header: {

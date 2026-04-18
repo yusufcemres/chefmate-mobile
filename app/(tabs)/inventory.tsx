@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
 import { useInventoryStore } from '../../src/stores/inventory';
 import { api } from '../../src/api/client';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 import { EmptyState } from '../../src/components/EmptyState';
 import type { InventoryItem, Product, Category } from '../../src/types';
 
@@ -38,6 +39,8 @@ const getItemEmoji = (item: InventoryItem): string => {
 };
 
 export default function InventoryScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const user = useAuthStore((s) => s.user);
   const { items, loading, fetchItems } = useInventoryStore();
   const [refreshing, setRefreshing] = useState(false);
@@ -286,7 +289,7 @@ export default function InventoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   list: {
     padding: spacing.md,

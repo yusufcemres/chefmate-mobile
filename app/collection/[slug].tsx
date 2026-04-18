@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,12 +14,16 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { api } from '../../src/api/client';
 import { useFavoritesStore } from '../../src/stores/favorites';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 
 const isWeb = Platform.OS === 'web';
 
 const difficultyLabel: Record<string, string> = { EASY: 'Kolay', MEDIUM: 'Orta', HARD: 'Zor' };
-const difficultyColor: Record<string, string> = { EASY: colors.easy, MEDIUM: colors.medium, HARD: colors.hard };
+const getDifficultyColor = (colors: ThemeColors, diff: string): string => {
+  const map: Record<string, string> = { EASY: colors.easy, MEDIUM: colors.medium, HARD: colors.hard };
+  return map[diff] || colors.textMuted;
+};
 
 function getCuisineTag(recipe: any) {
   return (recipe.tags || []).map((rt: any) => rt.tag || rt).find((t: any) => t.type === 'CUISINE');
@@ -29,6 +33,8 @@ function getCategoryTag(recipe: any) {
 }
 
 export default function CollectionDetailScreen() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const [collection, setCollection] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -131,7 +137,7 @@ export default function CollectionDetailScreen() {
             <Text style={s.metaDot}>·</Text>
             <Text style={s.meta}>{item.totalTimeMinutes || 0}dk</Text>
             <Text style={s.metaDot}>·</Text>
-            <Text style={[s.meta, { color: difficultyColor[item.difficulty] }]}>
+            <Text style={[s.meta, { color: getDifficultyColor(colors, item.difficulty) }]}>
               {difficultyLabel[item.difficulty] || item.difficulty}
             </Text>
           </View>
@@ -162,7 +168,7 @@ export default function CollectionDetailScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   list: {
     backgroundColor: colors.background,

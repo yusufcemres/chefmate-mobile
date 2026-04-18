@@ -1,9 +1,14 @@
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
+import { useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 // Only renders on web
 export function WebFooter() {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+
   if (Platform.OS !== 'web') return null;
 
   return (
@@ -54,7 +59,7 @@ export function WebFooter() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     backgroundColor: colors.surfaceContainerLow,
     borderTopLeftRadius: borderRadius.xxl,

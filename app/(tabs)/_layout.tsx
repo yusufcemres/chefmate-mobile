@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { Platform, View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, borderRadius } from '../../src/theme';
+import { borderRadius } from '../../src/theme';
 import { useTheme } from '../../src/theme/ThemeContext';
 
 const TAB_ICONS: Record<string, keyof typeof MaterialIcons.glyphMap> = {
@@ -30,6 +31,7 @@ export default function TabLayout() {
   }, [checkOnboarding]);
 
   const { colors: c } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (isLoading || onboardingDone === null) {
     return (
@@ -49,8 +51,8 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: c.surfaceContainerLowest,
           borderTopColor: 'transparent',
-          height: Platform.OS === 'web' ? 64 : 70,
-          paddingBottom: Platform.OS === 'web' ? 8 : 12,
+          height: (Platform.OS === 'web' ? 64 : 70) + (Platform.OS === 'web' ? 0 : insets.bottom),
+          paddingBottom: (Platform.OS === 'web' ? 8 : 12) + (Platform.OS === 'web' ? 0 : insets.bottom),
           paddingTop: 6,
           borderTopLeftRadius: borderRadius.xxl,
           borderTopRightRadius: borderRadius.xxl,

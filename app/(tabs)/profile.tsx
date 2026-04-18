@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { withScreenErrorBoundary } from '../../src/components/ScreenErrorBoundary';
 import {
   View,
@@ -16,7 +16,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/stores/auth';
 import { useFavoritesStore } from '../../src/stores/favorites';
 import { api } from '../../src/api/client';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
 import { useTheme } from '../../src/theme/ThemeContext';
 import BadgeDisplay from '../../src/components/BadgeDisplay';
 
@@ -74,9 +75,11 @@ interface WasteStats {
 }
 
 function ProfileScreen() {
+  const insets = useSafeAreaInsets();
   const { user, preferences, logout, updatePreferences } = useAuthStore();
   const { ids: favoriteIds, loaded: favsLoaded, fetch: fetchFavs } = useFavoritesStore();
-  const { mode: themeMode, setMode: setThemeMode, isDark } = useTheme();
+  const { mode: themeMode, setMode: setThemeMode, isDark, colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [selectedAllergens, setSelectedAllergens] = useState<string[]>(preferences?.allergens || []);
   const [selectedDiets, setSelectedDiets] = useState<Record<string, boolean>>(
     preferences?.dietaryProfile || {},
@@ -172,7 +175,10 @@ function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={[styles.content, { paddingBottom: spacing.md + 70 + insets.bottom + 24 }]}
+    >
       {/* ===== Profile Header ===== */}
       <View style={styles.profileHeader} accessibilityLabel={`Profil: ${user?.displayName || 'ChefMate Kullanıcı'}`}>
         <View style={styles.avatarContainer} accessibilityLabel={`${user?.displayName || 'Kullanıcı'} profil fotoğrafı`}>
@@ -330,26 +336,28 @@ function ProfileScreen() {
                 { key: 'light' as ThemeMode, label: 'Açık', icon: 'light-mode' as const },
                 { key: 'dark' as ThemeMode, label: 'Koyu', icon: 'dark-mode' as const },
                 { key: 'system' as ThemeMode, label: 'Sistem', icon: 'settings-brightness' as const },
-              ]).map((t) => (
-                <TouchableOpacity
-                  key={t.key}
-                  style={[styles.themeBtn, themeMode === t.key && styles.themeBtnActive]}
-                  onPress={() => setThemeMode(t.key)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${t.label} tema`}
-                  accessibilityState={{ selected: themeMode === t.key }}
-                >
-                  <MaterialIcons
-                    name={t.icon}
-                    size={20}
-                    color={themeMode === t.key ? colors.onPrimary : colors.textSecondary}
-                  />
-                  <Text style={[
-                    styles.themeBtnText,
-                    themeMode === t.key && styles.themeBtnTextActive,
-                  ]}>{t.label}</Text>
-                </TouchableOpacity>
-              ))}
+              ]).map((t) => {
+                const isCurrent = t.key === themeMode;
+                return (
+                  <TouchableOpacity
+                    key={t.key}
+                    style={[styles.themeBtn, isCurrent && styles.themeBtnActive]}
+                    onPress={() => setThemeMode(t.key)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t.label} tema`}
+                    accessibilityState={{ selected: isCurrent }}
+                  >
+                    <MaterialIcons
+                      name={t.icon}
+                      size={20}
+                      color={isCurrent ? colors.onPrimary : colors.textMuted}
+                    />
+                    <Text style={[styles.themeBtnText, isCurrent && styles.themeBtnTextActive]}>
+                      {t.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
 
@@ -563,7 +571,7 @@ function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: {
     padding: spacing.md,

@@ -63,14 +63,16 @@ function HomeScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      const toArr = (res: any): any[] =>
+        Array.isArray(res) ? res : res?.items || res?.data || [];
       const [trendRes, seasonRes, catRes] = await Promise.all([
-        api.get<any>('/recipes/trending?limit=6').catch(() => ({ items: [] })),
-        api.get<any>('/recipes/seasonal?limit=10').catch(() => ({ items: [] })),
-        api.get<any>('/tags?type=CATEGORY').catch(() => ({ items: [] })),
+        api.get<any>('/recipes/trending?limit=6').catch(() => []),
+        api.get<any>('/recipes/seasonal?limit=10').catch(() => []),
+        api.get<any>('/tags?type=CATEGORY').catch(() => []),
       ]);
-      setTrending(trendRes.items || trendRes.data || []);
-      setSeasonal(seasonRes.items || seasonRes.data || []);
-      setCategories((catRes.items || catRes.data || []).slice(0, 8));
+      setTrending(toArr(trendRes));
+      setSeasonal(toArr(seasonRes));
+      setCategories(toArr(catRes).slice(0, 8));
     } catch (e) {
       // silent
     } finally {

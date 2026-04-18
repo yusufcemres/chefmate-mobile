@@ -15,11 +15,14 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { useShoppingStore } from '../../src/stores/shopping';
 import { useAuthStore } from '../../src/stores/auth';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../../src/theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
+import { useTheme } from '../../src/theme/ThemeContext';
 import { EmptyState } from '../../src/components/EmptyState';
 import type { ShoppingList, ShoppingListItem } from '../../src/types';
 
 export default function ShoppingScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { lists, currentList, loading, error, fetchLists, fetchList, createList, addItem, toggleItem, removeItem, deleteList } = useShoppingStore();
   const { user } = useAuthStore();
 
@@ -306,7 +309,7 @@ export default function ShoppingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { colors, spacing, fontSize, borderRadius, fonts } from '../theme';
+import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../theme';
+import { useTheme } from '../theme/ThemeContext';
 
 interface Props {
   icon: keyof typeof MaterialIcons.glyphMap;
@@ -11,6 +13,9 @@ interface Props {
 }
 
 export function EmptyState({ icon, title, message, ctaLabel, onCta }: Props) {
+  const { colors } = useTheme();
+  const s = useMemo(() => makeStyles(colors), [colors]);
+
   return (
     <View style={s.container}>
       <View style={s.iconWrap}>
@@ -27,7 +32,7 @@ export function EmptyState({ icon, title, message, ctaLabel, onCta }: Props) {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: {
     alignItems: 'center',
     paddingVertical: spacing.xxl,

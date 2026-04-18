@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { withScreenErrorBoundary } from '../src/components/ScreenErrorBoundary';
 import {
   View,
@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useNotificationStore } from '../src/stores/notifications';
-import { colors, spacing, fontSize, borderRadius } from '../src/theme';
+import { spacing, fontSize, borderRadius, type ThemeColors } from '../src/theme';
+import { useTheme } from '../src/theme/ThemeContext';
 
 function daysUntil(dateStr: string | null): number {
   if (!dateStr) return Infinity;
@@ -25,7 +26,7 @@ function daysUntil(dateStr: string | null): number {
   return Math.ceil((exp.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function expiryLabel(dateStr: string | null): { text: string; color: string } {
+function expiryLabel(dateStr: string | null, colors: ThemeColors): { text: string; color: string } {
   const days = daysUntil(dateStr);
   if (days <= 0) return { text: 'Bugün sona eriyor!', color: colors.error };
   if (days === 1) return { text: 'Yarın sona eriyor', color: colors.error };
@@ -47,6 +48,8 @@ const STORAGE_ICONS: Record<string, string> = {
 };
 
 function NotificationsScreen() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const { expiringItems, loading, pushEnabled, fetchExpiringItems, requestPermissionAndRegister, removePushToken } = useNotificationStore();
   const [daysAhead, setDaysAhead] = useState(3);
 
@@ -154,7 +157,7 @@ function NotificationsScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={onRefresh} tintColor={colors.primary} />}
         contentContainerStyle={{ paddingBottom: 40 }}
         renderItem={({ item }) => {
-          const expiry = expiryLabel(item.expirationDate);
+          const expiry = expiryLabel(item.expirationDate, colors);
           return (
             <View style={styles.itemCard}>
               <Text style={styles.itemIcon}>{STORAGE_ICONS[item.storageLocation] || '📦'}</Text>
@@ -178,7 +181,7 @@ function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
 
   header: {

@@ -161,3 +161,5 @@ export const colors = {
 
 export const darkColors = colors;
 
+export type ThemeColors = typeof lightColors;
+
