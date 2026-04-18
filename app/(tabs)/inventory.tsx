@@ -67,9 +67,9 @@ export default function InventoryScreen() {
     setSearch(q);
     if (q.length < 2) { setSearchResults([]); return; }
     try {
-      const res = await api.get<{ data: any[] }>(`/products/search?q=${encodeURIComponent(q)}`);
-      // API returns productName, normalize to name
-      const mapped = (res as any[] || []).map((p: any) => ({ ...p, name: p.productName || p.name }));
+      const res = await api.get<any>(`/products/search?q=${encodeURIComponent(q)}`);
+      const items: any[] = Array.isArray(res) ? res : (res?.data || []);
+      const mapped = items.map((p: any) => ({ ...p, name: p.productName || p.name }));
       setSearchResults(mapped);
     } catch {
       setSearchResults([]);

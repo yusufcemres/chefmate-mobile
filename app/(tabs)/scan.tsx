@@ -509,7 +509,7 @@ export default function ScanScreen() {
         <View style={styles.resultSection}>
           {/* Photo preview row */}
           <View style={styles.photoRow}>
-            <Image source={{ uri: imageUri }} style={styles.preview} />
+            <Image source={{ uri: imageUri || undefined }} style={styles.preview} />
             {additionalImages.map((uri, idx) => (
               <Image key={idx} source={{ uri }} style={styles.previewSmall} />
             ))}

@@ -19,6 +19,8 @@ export interface UserPreference {
   allergens: string[];
   dislikedItems: string[];
   servingSize: number;
+  cuisinePreferences?: string[];
+  cookingSkillLevel?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
 }
 
 // ========== PRODUCTS ==========
