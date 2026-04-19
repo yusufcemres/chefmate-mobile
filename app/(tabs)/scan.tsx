@@ -14,9 +14,11 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { api } from '../../src/api/client';
 import { useAuthStore } from '../../src/stores/auth';
 import { useInventoryStore } from '../../src/stores/inventory';
+import { useScanHandoffStore } from '../../src/stores/scan-handoff';
 import { spacing, fontSize, borderRadius, fonts, type ThemeColors } from '../../src/theme';
 import { useTheme } from '../../src/theme/ThemeContext';
 
@@ -88,6 +90,26 @@ export default function ScanScreen() {
       return () => pulse.stop();
     }
   }, [loading]);
+
+  // Consume handoff from "Mutfağımı Keşfet" flow
+  const pendingPhotos = useScanHandoffStore((s) => s.pendingPhotos);
+  const pendingAutoStart = useScanHandoffStore((s) => s.autoStart);
+  useEffect(() => {
+    if (pendingPhotos.length === 0) return;
+    const first = pendingPhotos[0];
+    const rest = pendingPhotos.slice(1);
+    const shouldAuto = pendingAutoStart;
+    setScanMode('ai');
+    setImageUri(first);
+    setAdditionalImages(rest);
+    setDetection(null);
+    setEditedItems([]);
+    setError(null);
+    useScanHandoffStore.getState().clear();
+    if (shouldAuto) {
+      setTimeout(() => startDetection(first, rest), 150);
+    }
+  }, [pendingPhotos]);
 
   const showAlert = (title: string, msg: string) => {
     if (Platform.OS === 'web') {
@@ -170,13 +192,15 @@ export default function ScanScreen() {
     }
   };
 
-  const startDetection = async () => {
-    if (!imageUri) return;
+  const startDetection = async (overrideUri?: string, overrideExtra?: string[]) => {
+    const primary = overrideUri ?? imageUri;
+    const extras = overrideExtra ?? additionalImages;
+    if (!primary) return;
     setLoading(true);
     setError(null);
     setScanStep('uploading');
     try {
-      const base64 = await getBase64(imageUri);
+      const base64 = await getBase64(primary);
       setScanStep('analyzing');
 
       // Start detection job with base64 image
@@ -186,7 +210,7 @@ export default function ScanScreen() {
       const jobId = (res as any).id;
 
       // If there are additional images, submit them too
-      for (const extra of additionalImages) {
+      for (const extra of extras) {
         const extraBase64 = await getBase64(extra);
         await api.post('/ai/inventory-detections/' + jobId + '/additional', {
           imageBase64: extraBase64,
@@ -495,9 +519,19 @@ export default function ScanScreen() {
           )}
 
           {Platform.OS !== 'web' && (
-            <TouchableOpacity style={styles.primaryBtn} onPress={pickImage}>
-              <MaterialIcons name="camera-alt" size={20} color={colors.textInverse} />
-              <Text style={styles.primaryBtnText}> Fotoğraf Çek</Text>
+            <TouchableOpacity style={styles.discoverBtn} onPress={() => router.push('/scan/discover')}>
+              <MaterialIcons name="auto-awesome" size={22} color={colors.textInverse} />
+              <View style={styles.discoverTextWrap}>
+                <Text style={styles.discoverTitle}>Mutfağımı Keşfet</Text>
+                <Text style={styles.discoverSub}>3 adımda rehberli çekim — en iyi sonuç</Text>
+              </View>
+              <MaterialIcons name="chevron-right" size={22} color={colors.textInverse} />
+            </TouchableOpacity>
+          )}
+          {Platform.OS !== 'web' && (
+            <TouchableOpacity style={styles.secondaryBtn} onPress={pickImage}>
+              <MaterialIcons name="camera-alt" size={18} color={colors.textSecondary} />
+              <Text style={styles.secondaryBtnText}> Tek Fotoğraf Çek</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.secondaryBtn} onPress={pickFromGallery}>
@@ -522,7 +556,7 @@ export default function ScanScreen() {
           </View>
 
           {!detection && !loading && !error && (
-            <TouchableOpacity style={styles.primaryBtn} onPress={startDetection}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => startDetection()}>
               <MaterialIcons name="auto-awesome" size={20} color={colors.textInverse} />
               <Text style={styles.primaryBtnText}> AI ile Tara {additionalImages.length > 0 ? `(${1 + additionalImages.length} fotoğraf)` : ''}</Text>
             </TouchableOpacity>
@@ -555,7 +589,7 @@ export default function ScanScreen() {
           {error && (
             <View style={styles.errorBox}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryBtn} onPress={startDetection}>
+              <TouchableOpacity style={styles.retryBtn} onPress={() => startDetection()}>
                 <Text style={styles.retryBtnText}>Tekrar Dene</Text>
               </TouchableOpacity>
             </View>
@@ -716,6 +750,31 @@ const makeStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: 'center',
     width: '100%',
     marginTop: spacing.sm,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  discoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    width: '100%',
+    marginTop: spacing.sm,
+  },
+  discoverTextWrap: { flex: 1 },
+  discoverTitle: {
+    color: colors.textInverse,
+    fontWeight: '800',
+    fontSize: fontSize.lg,
+  },
+  discoverSub: {
+    color: colors.textInverse,
+    opacity: 0.85,
+    fontSize: fontSize.xs,
+    marginTop: 2,
   },
   secondaryBtnText: {
     color: colors.textSecondary,
