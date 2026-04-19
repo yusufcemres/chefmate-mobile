@@ -21,7 +21,7 @@ import {
   Manrope_600SemiBold,
 } from '@expo-google-fonts/manrope';
 import { useAuthStore } from '../src/stores/auth';
-import { darkColors } from '../src/theme';
+import { lightColors } from '../src/theme';
 import { ThemeProvider, useTheme } from '../src/theme/ThemeContext';
 import { useOfflineCacheStore } from '../src/stores/offline-cache';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
@@ -63,7 +63,7 @@ export default function RootLayout() {
   if (!ready) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color={darkColors.primary} />
+        <ActivityIndicator size="large" color={lightColors.primary} />
       </View>
     );
   }
@@ -127,6 +127,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: darkColors.background,
+    backgroundColor: lightColors.background,
   },
 });
